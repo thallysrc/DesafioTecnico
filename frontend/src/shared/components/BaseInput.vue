@@ -5,7 +5,7 @@ interface Props {
   modelValue: string | number | null
   label: string
   id?: string
-  type?: 'text' | 'number' | 'email'
+  type?: 'text' | 'number' | 'email' | 'date'
   placeholder?: string
   required?: boolean
   disabled?: boolean
