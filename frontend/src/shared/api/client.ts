@@ -1,8 +1,9 @@
 import axios, { type AxiosError } from 'axios'
 
 /**
- * Canonical error envelope returned by the backend. Phase 2 expands the interceptor below
- * to normalize every rejected request into this shape so UI components consume `.hint` directly.
+ * Canonical error envelope. Mirrors backend ErrorResponse exactly (Plan 02-02).
+ * The interceptor below normalizes every rejection to this shape so UI code reads
+ * `error.hint`, `error.errorCode`, `error.traceId` without coercion.
  */
 export interface ApiError {
   errorCode: string
@@ -11,15 +12,13 @@ export interface ApiError {
   hint?: string
   statusCode: number
   retryable: boolean
-  details?: Record<string, unknown>
+  details?: Record<string, unknown> | { fields: Array<{ field: string; message: string; rejectedValue?: unknown }> }
   traceId: string
   timestamp: string
 }
 
 /**
- * Single Axios instance for the entire app. D-08: baseURL = '/api'. Calls written as
- * `apiClient.get('/health')` resolve to `/api/health`, which the Vite dev server proxies
- * to `http://backend:8080/api/health`.
+ * Single Axios instance. baseURL '/api' resolves via Vite proxy to http://backend:8080/api (D-08).
  */
 export const apiClient = axios.create({
   baseURL: '/api',
@@ -27,19 +26,23 @@ export const apiClient = axios.create({
   headers: { 'Content-Type': 'application/json' },
 })
 
-// Phase 1 interceptor: lightweight. Phase 2 expands this with full ApiError normalization,
-// idempotency-key generation for POST /stock-movements, etc.
 apiClient.interceptors.response.use(
   (response) => response,
   (error: AxiosError<ApiError>) => {
-    if (error.response?.data?.errorCode) {
+    // Backend returned a canonical ErrorResponse → pass through.
+    if (
+      error.response?.data &&
+      typeof error.response.data === 'object' &&
+      'errorCode' in error.response.data
+    ) {
       return Promise.reject(error.response.data)
     }
+    // Network/timeout/CORS/etc → synthesize a NETWORK_ERROR ApiError.
     const fallback: ApiError = {
       errorCode: 'NETWORK_ERROR',
       category: 'INTERNAL',
       message: 'Erro ao se comunicar com o servidor',
-      hint: 'Verifique sua conexão e tente novamente.',
+      hint: 'Não foi possível conectar. Verifique sua conexão e tente novamente.',
       statusCode: error.response?.status ?? 0,
       retryable: true,
       traceId: 'client',
