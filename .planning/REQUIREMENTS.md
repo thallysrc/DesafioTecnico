@@ -168,26 +168,114 @@ Deferred to future release.
 
 ## Traceability
 
-Será populado durante criação do roadmap (cada REQ-ID mapeado para uma fase).
+Cada REQ-ID v1 mapeado para exatamente uma fase do ROADMAP.md.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| INFRA-01..08 | TBD | Pending |
-| BACK-01..16 | TBD | Pending |
-| PROD-01..07 | TBD | Pending |
-| MOVE-01..11 | TBD | Pending |
-| AGENT-01..11 | TBD | Pending |
-| FRONT-01..12 | TBD | Pending |
-| UX-01..13 | TBD | Pending |
-| CONF-01..03 | TBD | Pending |
-| TEST-01..07 | TBD | Pending |
-| DOC-01..09 | TBD | Pending |
+| INFRA-01 | Phase 1 | Pending |
+| INFRA-02 | Phase 1 | Pending |
+| INFRA-03 | Phase 1 | Pending |
+| INFRA-04 | Phase 1 | Pending |
+| INFRA-05 | Phase 1 | Pending |
+| INFRA-06 | Phase 1 | Pending |
+| INFRA-07 | Phase 1 | Pending |
+| INFRA-08 | Phase 1 | Pending |
+| BACK-01 | Phase 1 | Pending |
+| BACK-02 | Phase 1 | Pending |
+| BACK-03 | Phase 1 | Pending |
+| BACK-04 | Phase 1 | Pending |
+| BACK-05 | Phase 2 | Pending |
+| BACK-06 | Phase 2 | Pending |
+| BACK-07 | Phase 2 | Pending |
+| BACK-08 | Phase 2 | Pending |
+| BACK-09 | Phase 2 | Pending |
+| BACK-10 | Phase 2 | Pending |
+| BACK-11 | Phase 2 | Pending |
+| BACK-12 | Phase 2 | Pending |
+| BACK-13 | Phase 2 | Pending |
+| BACK-14 | Phase 2 | Pending |
+| BACK-15 | Phase 2 | Pending |
+| BACK-16 | Phase 2 | Pending |
+| PROD-01 | Phase 2 | Pending |
+| PROD-02 | Phase 2 | Pending |
+| PROD-03 | Phase 2 | Pending |
+| PROD-04 | Phase 2 | Pending |
+| PROD-05 | Phase 2 | Pending |
+| PROD-06 | Phase 2 | Pending |
+| PROD-07 | Phase 2 | Pending |
+| MOVE-01 | Phase 3 | Pending |
+| MOVE-02 | Phase 3 | Pending |
+| MOVE-03 | Phase 3 | Pending |
+| MOVE-04 | Phase 3 | Pending |
+| MOVE-05 | Phase 3 | Pending |
+| MOVE-06 | Phase 3 | Pending |
+| MOVE-07 | Phase 3 | Pending |
+| MOVE-08 | Phase 3 | Pending |
+| MOVE-09 | Phase 3 | Pending |
+| MOVE-10 | Phase 3 | Pending |
+| MOVE-11 | Phase 3 | Pending |
+| AGENT-01 | Phase 2 | Pending |
+| AGENT-02 | Phase 2 | Pending |
+| AGENT-03 | Phase 2 | Pending |
+| AGENT-04 | Phase 2 | Pending |
+| AGENT-05 | Phase 2 | Pending |
+| AGENT-06 | Phase 2 | Pending |
+| AGENT-07 | Phase 2 | Pending |
+| AGENT-08 | Phase 2 | Pending |
+| AGENT-09 | Phase 2 | Pending |
+| AGENT-10 | Phase 2 | Pending |
+| AGENT-11 | Phase 2 | Pending |
+| FRONT-01 | Phase 1 | Pending |
+| FRONT-02 | Phase 1 | Pending |
+| FRONT-03 | Phase 1 | Pending |
+| FRONT-04 | Phase 1 | Pending |
+| FRONT-05 | Phase 2 | Pending |
+| FRONT-06 | Phase 2 | Pending |
+| FRONT-07 | Phase 2 | Pending |
+| FRONT-08 | Phase 2 | Pending |
+| FRONT-09 | Phase 1 | Pending |
+| FRONT-10 | Phase 1 | Pending |
+| FRONT-11 | Phase 1 | Pending |
+| FRONT-12 | Phase 3 | Pending |
+| UX-01 | Phase 2 | Pending |
+| UX-02 | Phase 2 | Pending |
+| UX-03 | Phase 2 | Pending |
+| UX-04 | Phase 2 | Pending |
+| UX-05 | Phase 2 | Pending |
+| UX-06 | Phase 2 | Pending |
+| UX-07 | Phase 2 | Pending |
+| UX-08 | Phase 2 | Pending |
+| UX-09 | Phase 2 | Pending |
+| UX-10 | Phase 2 | Pending |
+| UX-11 | Phase 2 | Pending |
+| UX-12 | Phase 2 | Pending |
+| UX-13 | Phase 2 | Pending |
+| CONF-01 | Phase 3 | Pending |
+| CONF-02 | Phase 2 | Pending |
+| CONF-03 | Phase 2 | Pending |
+| TEST-01 | Phase 4 | Pending |
+| TEST-02 | Phase 4 | Pending |
+| TEST-03 | Phase 4 | Pending |
+| TEST-04 | Phase 4 | Pending |
+| TEST-05 | Phase 4 | Pending |
+| TEST-06 | Phase 4 | Pending |
+| TEST-07 | Phase 4 | Pending |
+| DOC-01 | Phase 4 | Pending |
+| DOC-02 | Phase 4 | Pending |
+| DOC-03 | Phase 4 | Pending |
+| DOC-04 | Phase 4 | Pending |
+| DOC-05 | Phase 4 | Pending |
+| DOC-06 | Phase 4 | Pending |
+| DOC-07 | Phase 4 | Pending |
+| DOC-08 | Phase 4 | Pending |
+| DOC-09 | Phase 1 | Pending |
 
 **Coverage:**
-- v1 requirements total: **86**
-- Mapped to phases: **0** (pending — roadmap creation)
-- Unmapped: 86 ⚠️ (esperado nesta fase)
+- v1 requirements total: **97** (INFRA 8 + BACK 16 + PROD 7 + MOVE 11 + AGENT 11 + FRONT 12 + UX 13 + CONF 3 + TEST 7 + DOC 9)
+- Mapped to phases: **97** ✓
+- Unmapped: 0
+- Per phase: Phase 1 → 20, Phase 2 → 48, Phase 3 → 13, Phase 4 → 16
 
 ---
 *Requirements defined: 2026-05-16*
-*Last updated: 2026-05-16 after rule consolidation*
+*Last updated: 2026-05-16 after roadmap creation (traceability populated, total corrected from 86 → 97)*
