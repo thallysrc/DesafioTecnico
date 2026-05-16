@@ -42,7 +42,12 @@ The API is **agentic-friendly from day one** (operationIds, structured errorCode
   3. Visiting `http://localhost:8080/swagger` shows Swagger UI; visiting `http://localhost:5173` shows the StockEasy SPA shell with sidebar (light theme, brand-50 active item, wordmark `Stock<accent>Easy</accent>`) and routes `/products` and `/stock-movements` resolvable
   4. Frontend Axios client reaches the backend without CORS errors; backend reads its connection string from `IConfiguration` (overridable by env var) and connects to Postgres on startup
   5. Backend solution `Inventory.sln` builds with `Inventory/` and `Inventory.Tests/` projects, namespaces follow `Inventory.Api.{Folder}`, XML doc generation enabled in `.csproj`
-**Plans**: TBD
+**Plans**: 4 plans
+Plans:
+- [ ] 01-01-PLAN.md — Infra: docker-compose.yml + init.sql + Dockerfiles (INFRA-01..03, INFRA-08)
+- [ ] 01-02-PLAN.md — Backend scaffold: Inventory.sln + Program.cs + IDbConnectionFactory + ExceptionHandlingMiddleware + GET /api/health (BACK-01..04, INFRA-04..07)
+- [ ] 01-03-PLAN.md — Frontend scaffold: Vite + Vue 3 + TS strict + Tailwind + AppShell + HealthPill + Axios + Vite proxy (FRONT-01..04, FRONT-09..11, INFRA-08)
+- [ ] 01-04-PLAN.md — E2E integration smoke + root README.md (DOC-09)
 **UI hint**: yes
 
 ### Phase 2: Products Vertical Slice

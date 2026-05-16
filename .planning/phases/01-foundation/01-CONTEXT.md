@@ -29,7 +29,7 @@ Scaffold both apps so `docker-compose up` boots Postgres + .NET API (Swagger rea
 ### Claude's Discretion
 Areas the user did not select for discussion — Claude resolves these during planning, anchored on PROJECT.md decisions and BancoShu patterns:
 - **Hello-world endpoint scope**: provide `GET /api/health` that pings Postgres (simple `SELECT 1` via Dapper) and returns `{ status, db, version, timestamp }`. SPA calls it on mount in App.vue to render a discreet "✓ API conectada" indicator. Cheap, proves criteria #1, #3, #4 of the roadmap explicitly.
-- **init.sql schema scope**: author the **full final schema in Phase 1** (per INFRA-03) — `products` with `deleted_at timestamptz NULL`, `stock_movements` with `idempotency_key uuid UNIQUE NULL`, all CHECK constraints, indexes on `products.code` UNIQUE WHERE `deleted_at IS NULL`, `stock_movements(product_id, occurred_at DESC)`. Avoids touching `init.sql` in P2/P3.
+- **init.sql schema scope**: author the **full final schema in Phase 1** (per INFRA-03) — `products` with `deleted_at timestamptz NULL` AND **`code text NOT NULL UNIQUE` (full UNIQUE, no filter, per `backend/CLAUDE.md` soft-delete reuse-prevention policy — codes from soft-deleted products are NOT reusable, and PROD-06 `DUPLICATE_CODE` is enforced for free at the DB layer)**; `stock_movements` with **`idempotency_key uuid NOT NULL UNIQUE` (per `backend/CLAUDE.md` + MOVE-02 — required on every movement insert)**, all CHECK constraints, indexes on `stock_movements(product_id, occurred_at DESC)`. These two reconciliations align CONTEXT.md with `backend/CLAUDE.md` as the authoritative source for schema details. Avoids touching `init.sql` in P2/P3.
 - **Icon system for sidebar**: `lucide-vue-next` (tree-shakeable, ~1KB per icon, minimal aesthetic that matches RoboteAsy palette). Two icons needed in P1: `Package` for Products, `ArrowLeftRight` for Stock Movements.
 - **DB startup behavior**: rely on `depends_on: service_healthy` (D-05) for ordering; backend opens connection lazily on first request. `Npgsql` connection pool handles transient failures. No in-app fail-fast probe needed for Phase 1.
 - **Port strategy**: `5432:5432` (PG), `8080:8080` (API), `5173:5173` (Vite). Matches BancoShu where applicable.
@@ -110,3 +110,5 @@ Areas the user did not select for discussion — Claude resolves these during pl
 
 *Phase: 01-foundation*
 *Context gathered: 2026-05-16*
+</content>
+</invoke>

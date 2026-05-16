@@ -205,13 +205,13 @@ Both `/products` and `/stock-movements` pages in Phase 1 render the same minimal
 
 Discreet indicator pinned to bottom of sidebar (`mt-auto` on its container). Calls `GET /api/health` from `App.vue` `onMounted` hook.
 
-**Three states:**
+**Three states** (state transitions are LOCKED — better-UX behavior: a degraded API or DB-down outage should surface as "API offline" so the user sees dependency outages, not just transport-level failures):
 
 | State | Icon (lucide) | Container classes | Icon classes | Text |
 |-------|---------------|-------------------|--------------|------|
 | Checking (initial, before response) | `Loader2` | `inline-flex items-center gap-2 px-3 py-1.5 rounded-md bg-surface` | `w-4 h-4 text-muted animate-spin` | `Verificando API…` in `text-xs text-muted` |
-| Connected (2xx) | `Check` | `inline-flex items-center gap-2 px-3 py-1.5 rounded-md bg-success/10` | `w-4 h-4 text-success` | `API conectada` in `text-xs font-medium text-success` |
-| Offline (non-2xx, network error, or timeout > 5s) | `XCircle` | `inline-flex items-center gap-2 px-3 py-1.5 rounded-md bg-danger/10` | `w-4 h-4 text-danger` | `API offline` in `text-xs font-medium text-danger` |
+| Connected (HTTP 2xx AND response body has `status: 'ok'` AND `db: 'up'`) | `Check` | `inline-flex items-center gap-2 px-3 py-1.5 rounded-md bg-success/10` | `w-4 h-4 text-success` | `API conectada` in `text-xs font-medium text-success` |
+| Offline (any other outcome: non-2xx, network error, timeout > 5s, OR 2xx with `status != 'ok'` OR `db != 'up'`) | `XCircle` | `inline-flex items-center gap-2 px-3 py-1.5 rounded-md bg-danger/10` | `w-4 h-4 text-danger` | `API offline` in `text-xs font-medium text-danger` |
 
 **Behavior rules:**
 - Single fetch on mount — no polling in Phase 1
@@ -298,3 +298,5 @@ The shell tokens locked here (spacing, type, color split, sidebar contract, layo
 - [ ] Dimension 6 Registry Safety: PASS
 
 **Approval:** pending
+</content>
+</invoke>
