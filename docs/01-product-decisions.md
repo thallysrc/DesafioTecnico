@@ -1,3 +1,9 @@
+---
+title: "Decisões de Produto"
+date: "2026-05"
+lang: pt-BR
+---
+
 # StockEasy — Decisões de Produto
 
 ## Visão

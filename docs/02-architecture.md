@@ -1,3 +1,9 @@
+---
+title: "Arquitetura"
+date: "2026-05"
+lang: pt-BR
+---
+
 # StockEasy — Arquitetura
 
 ## Stack
