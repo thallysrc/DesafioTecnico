@@ -12,6 +12,7 @@ Aplicação fullstack para gestão de produtos e movimentações de estoque, ent
 | Frontend | Vue 3 + Vite + TypeScript estrito + Tailwind CSS |
 | Validação | FluentValidation (backend) · Vee-Validate + Zod (frontend) |
 | Docs API | Swashbuckle.AspNetCore + Annotations (Swagger UI) |
+| Testes | xUnit 2.9 + Moq 4.20 (backend) · Vitest 4.1 + @vue/test-utils + happy-dom (frontend) |
 | Container | Docker Compose (PG + .NET SDK + Node 20) |
 
 A challenge spec original está preservada em [`README.challenge-spec.md`](README.challenge-spec.md).
@@ -66,10 +67,17 @@ DesafioTecnico/
 │       └── features/
 │           ├── products/    # produtos (Phase 2)
 │           └── stock/       # movimentações (Phase 3)
+├── docs/                    # documentação branded (markdown sources + PDFs)
+│   ├── 01-product-decisions.md
+│   ├── 02-architecture.md   # 5 diagramas Mermaid + stack table
+│   ├── 03-business-rules.md # entidades + 9 errorCodes + idempotency
+│   ├── assets/              # pdf-style.css + pandoc-template.html
+│   ├── generate-pdfs.sh     # Pandoc + WeasyPrint + mermaid-filter
+│   └── dist/                # 3 PDFs branded commitados (DOC-07)
 └── .planning/               # planejamento GSD (fases, contexto, decisions log)
 ```
 
-A documentação detalhada (decisões de produto, arquitetura com diagramas Mermaid, regras de negócio + catálogo de errorCodes) chega na entrega final em `docs/dist/` (PDFs branded). Esta fase entrega a fundação para rodar.
+A documentação detalhada (decisões de produto, arquitetura com diagramas Mermaid, regras de negócio + catálogo de errorCodes) está pronta em `docs/dist/` (PDFs branded — ver §[Documentação](#documentação) abaixo).
 
 ## Status
 
@@ -78,7 +86,7 @@ A documentação detalhada (decisões de produto, arquitetura com diagramas Merm
 | 1. Foundation | docker-compose end-to-end com health check | entregue |
 | 2. Products Vertical Slice | CRUD de produtos com soft delete + validação | entregue |
 | 3. Stock Movements Vertical Slice | entradas/saídas com idempotência + saldo | entregue |
-| 4. Tests, Docs & Polish | xUnit + Vitest + 3 PDFs branded em `docs/dist/` | final |
+| 4. Tests, Docs & Polish | xUnit (42/42) + Vitest (18/18 + componentes) verdes + 3 PDFs branded em `docs/dist/` + README polido | entregue |
 
 ## Endpoints (v1)
 
@@ -171,6 +179,40 @@ curl -sS http://localhost:8080/swagger/v1/swagger.json | head -c 200
 # Frontend SPA shell
 curl -sS http://localhost:5173/ | grep -E '<title>|app'
 ```
+
+## Documentação
+
+Documentação detalhada com branding StockEasy (paleta `#1863DC`, tipografia Inter, capa + cabeçalho + numeração de páginas) — os PDFs já estão commitados em `docs/dist/`, o avaliador abre direto, sem instalar nada:
+
+- [`docs/dist/01-product-decisions.pdf`](docs/dist/01-product-decisions.pdf) — visão do produto, decisões estratégicas (.NET 8 + Dapper + PG16, API agentic, soft delete, idempotência), trade-offs e roadmap v2 (chat LLM consumindo a API como tools)
+- [`docs/dist/02-architecture.pdf`](docs/dist/02-architecture.pdf) — 5 diagramas Mermaid renderizados como SVG (system context, backend layered, sequence stock-out, ER, frontend feature flow) + tabela de stack + instruções de execução
+- [`docs/dist/03-business-rules.pdf`](docs/dist/03-business-rules.pdf) — entidades, enums, regras enforced (soft delete, idempotência, `SELECT FOR UPDATE`, zero N+1, imutabilidade do histórico) e catálogo completo de `errorCodes` (9 códigos com HTTP status + categoria + hint pattern + condição)
+
+Os fontes em markdown estão em `docs/01-*.md`, `docs/02-*.md`, `docs/03-*.md`. Para regerar os PDFs localmente (opt-in para o desenvolvedor, não para o avaliador), ver `docs/README.md` — pipeline Pandoc + WeasyPrint + mermaid-filter via `docs/generate-pdfs.sh`.
+
+## Testes
+
+CI local (TEST-07) — duas linhas, ambas saem `exit 0` num clone limpo.
+
+**Backend (xUnit 2.9 + Moq 4.20 + FluentValidation TestHelper):**
+
+```bash
+cd backend && dotnet test
+```
+
+Cobre `ProductService` (12 facts: happy paths + `DUPLICATE_CODE` + `PRODUCT_NOT_FOUND`), `StockMovementService` (15 facts: idempotency replay short-circuit, listagem clamps, e Grupo B com payload contract de cada errorCode — `INSUFFICIENT_BALANCE`, `PRODUCT_DELETED`, `INVALID_MOVEMENT_VALUES`, `MOVEMENT_NOT_FOUND`, `MISSING_IDEMPOTENCY_KEY`), `CreateProductRequestValidator` (Phase 2) e `CreateMovementRequestValidator` (6 facts: uma por regra). Cada cenário de exception roda o helper `AssertDomain.Trio(ex, code, msgSubstring)` que enforce a tríade `(ErrorCode, Message substring, Hint não-nulo)` — TEST-03. Total: **42/42 verdes**.
+
+**Frontend (Vitest 4.1 + @vue/test-utils 2.4 + happy-dom):**
+
+```bash
+cd frontend && npm install && npm test
+```
+
+Cobre `useProducts` e `useStockMovements` (composables, com `vi.mock('../api')` isolando da camada Axios — state transitions loading→success/error, `apiError` shape preservado, list/page updates após mutação) e `ProductForm` + `OutboundForm` (componentes, shallow-mounted com stubs primitivos: validação, emit de eventos, helper `Disponível` UX-08, abertura do modal CONF-01). Total: **27 testes em 4 arquivos verdes** (18 composables do Plan 04-02 + 9 componentes do Plan 04-03).
+
+Per CONTEXT.md D-24 / D-25: sem GitHub Actions CI (TEST-07 é "CI local" explicitamente) e sem coverage thresholds (verde basta).
+
+> **Nota de toolchain:** o backend exige .NET 8 SDK no host (`dotnet --version` ≥ 8). Alternativa Docker (mesma config usada para validar este repo no worktree): `docker run --rm -v "$(pwd)/backend:/work" -w /work mcr.microsoft.com/dotnet/sdk:8.0 dotnet test`. O frontend exige Node ≥ 18 (Vitest 4 não roda em Node 14); use `nvm use 20` ou Docker (`node:20-alpine`).
 
 ## Notas para o avaliador
 
