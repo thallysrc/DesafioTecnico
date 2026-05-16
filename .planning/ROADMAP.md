@@ -65,8 +65,8 @@ Plans:
 - [x] 02-01-PLAN.md — Backend domain: Product entity, ProductType enum, Dapper repository, DTOs, FluentValidation (BACK-05/06/11/15/16, PROD-07, AGENT-04/10)
 - [x] 02-02-PLAN.md — Backend cross-cutting: DomainException hierarchy + typed product exceptions + ExceptionHandlingMiddleware mapping (BACK-12/13/14, AGENT-01/06/07/08/11)
 - [x] 02-03-PLAN.md — Frontend primitives: 15 BaseX SFCs + 3 composables + format/labels/types + extended Axios interceptor (FRONT-05/06/07/08/09/10/11, UX-01..13 except UX-08)
-- [ ] 02-04-PLAN.md — Backend wire-up: ProductService + ProductsController + DI registration (BACK-07/08/09/10, PROD-01..06, AGENT-02/03/05/09)
-- [ ] 02-05-PLAN.md — Frontend Products feature: types/api/schema/composable + 4 components + ProductsPage rewrite (CONF-02/03 + locked PT-BR mirror)
+- [x] 02-04-PLAN.md — Backend wire-up: ProductService + ProductsController + DI registration (BACK-07/08/09/10, PROD-01..06, AGENT-02/03/05/09)
+- [x] 02-05-PLAN.md — Frontend Products feature: types/api/schema/composable + 4 components + ProductsPage rewrite (CONF-02/03 + locked PT-BR mirror)
 - [ ] 02-06-PLAN.md — End-to-end smoke: docker compose stack + curl matrix + Swagger contract + frontend SPA + README touchup
 **UI hint**: yes
 
@@ -107,7 +107,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Foundation | 0/TBD | Not started | - |
-| 2. Products Vertical Slice | 3/6 | In Progress|  |
+| 2. Products Vertical Slice | 5/6 | In Progress|  |
 | 3. Stock Movements Vertical Slice | 0/TBD | Not started | - |
 | 4. Tests, Docs & Polish | 0/TBD | Not started | - |
 
