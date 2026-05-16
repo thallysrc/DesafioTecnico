@@ -18,7 +18,12 @@ Demonstrar competência fullstack através de uma implementação **limpa, testa
 
 <!-- Shipped and confirmed valuable. -->
 
-(None yet — ship to validate)
+**Validated in Phase 1: Foundation (2026-05-16)** — scaffolding only, no business capability yet:
+- Stack & arquitetura wired: .NET 8 + Dapper + PostgreSQL 16 (single-project N-tier `Inventory/` + `Inventory.Tests/`), Vue 3 + Vite + TS strict + Tailwind (feature-based `src/features/{products,stock}/`)
+- Cross-cutting plumbing live but inactive: `ExceptionHandlingMiddleware` shell, FluentValidation pipeline registered, Swagger + `JsonStringEnumConverter`, CORS named policy `"Frontend"`, Axios `baseURL: '/api'` + Vite proxy → `http://backend:8080`
+- Brand identity rendering: paleta `brand-50..900` (#1863DC), Inter via Google Fonts, wordmark `Stock<span class="text-brand-500">Easy</span>`, sidebar light com `lucide-vue-next`
+- Schema autoritativo em `init.sql`: `products` (com `deleted_at`, `code UNIQUE` sem filtro — anti-reuso) + `stock_movements` (com `idempotency_key NOT NULL UNIQUE`) — não precisa tocar em Phase 2/3
+- Infraestrutura: `docker-compose up` boots PG + .NET API + Vue SPA com hot reload; `GET /api/health` prova end-to-end; root README guia o avaliador
 
 ### Active
 
@@ -239,4 +244,4 @@ This document evolves at phase transitions and milestone boundaries.
 - Tools: leituras (listar produtos, ver histórico, saldo), cadastro de produto, entrada de estoque, saída de estoque (com confirmação)
 
 ---
-*Last updated: 2026-05-16 after rule consolidation*
+*Last updated: 2026-05-16 — Phase 1 (Foundation) complete; scaffolding validated end-to-end via docker-compose smoke*
