@@ -1,0 +1,19 @@
+# StockEasy — root-level ignores
+#
+# Per-subproject .gitignore files live in backend/, backend/Inventory/, frontend/.
+# This file scopes ignores that are project-wide (not specific to a stack).
+#
+# IMPORTANT: docs/dist/*.pdf are COMMITTED (per CONTEXT.md D-17 / DOC-08) — the
+# evaluator opens them straight from the repo. Do NOT add `docs/dist/` or
+# `*.pdf` here.
+
+# docs: mermaid-filter intermediate artifacts (do NOT ignore docs/dist/*.pdf — those are committed)
+docs/.mermaid-filter*
+docs/dist/*.tmp
+docs/dist/*.html
+
+# Editor / OS noise
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
