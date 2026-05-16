@@ -47,7 +47,7 @@ Plans:
 - [x] 01-01-PLAN.md — Infra: docker-compose.yml + init.sql + Dockerfiles (INFRA-01..03, INFRA-08)
 - [x] 01-02-PLAN.md — Backend scaffold: Inventory.sln + Program.cs + IDbConnectionFactory + ExceptionHandlingMiddleware + GET /api/health (BACK-01..04, INFRA-04..07)
 - [x] 01-03-PLAN.md — Frontend scaffold: Vite + Vue 3 + TS strict + Tailwind + AppShell + HealthPill + Axios + Vite proxy (FRONT-01..04, FRONT-09..11, INFRA-08)
-- [ ] 01-04-PLAN.md — E2E integration smoke + root README.md (DOC-09)
+- [x] 01-04-PLAN.md — E2E integration smoke + root README.md (DOC-09)
 **UI hint**: yes
 
 ### Phase 2: Products Vertical Slice
