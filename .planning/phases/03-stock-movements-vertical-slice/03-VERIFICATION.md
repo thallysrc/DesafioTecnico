@@ -673,7 +673,70 @@ These items belong to Phase 4 (xUnit + Vitest + Playwright/Cypress + manual UAT)
 
 **All 13 requirements assigned to this plan have evidence.** Coverage: 13/13.
 
-(Task 5 finalizes the Sign-off + Known Limitations sections.)
+---
+
+## Regression Sanity (Phase 2 still works)
+
+After all Phase 3 smoke runs, Phase 2's GET /api/products and `/products` SPA route remain regression-clean:
+
+```bash
+$ curl -fsS "http://localhost:8080/api/products?pageSize=5" | jq '{hasItems: (.items != null), hasPagination: (.pagination != null), hasLinks: (._links != null)}'
+{
+  "hasItems": true,
+  "hasPagination": true,
+  "hasLinks": true
+}
+
+$ curl -fsS http://localhost:5173/products -o /tmp/03-05/products-spa.html
+$ grep -q "StockEasy" /tmp/03-05/products-spa.html && echo OK
+OK
+```
+
+Phase 2 endpoints still respond with the canonical envelope; Phase 2 frontend route still loads the Vite shell. **Zero regression observed.** Phase 2 operationIds (`createProduct`, `listProducts`, `getProduct`, `deleteProduct`) are still in `/swagger/v1/swagger.json` (counted in §"Swagger Contract").
+
+---
+
+## Sign-off — 5 ROADMAP Success Criteria for Phase 3
+
+| # | Success Criterion | Status | Evidence section |
+| - | ---------------- | ------ | ---------------- |
+| 1 | Inbound registered atomically (stock + supplier_value updated in one tx) | ✓ | §Criterion 1 — Inbound atomicity (MOVE-01 + MOVE-06) |
+| 2 | Outbound with full resumo modal (CONF-01) + atomic decrement | ✓ | §Criterion 2 — Outbound atomicity (API) + §CONF-01 — locked copy (source grep) |
+| 3 | INSUFFICIENT_BALANCE with dynamic hint and `details` | ✓ | §MOVE-04 (Criterion 3) — HTTP 422 + dynamic hint mentioning `55` + details.deficit=999944 |
+| 4 | Idempotency-Key required + replay returns 200 + `Idempotency-Replay: true` + identical body | ✓ | §MOVE-02 (key required) + §MOVE-03 (replay payload identity) + §FRONT-12 (Criterion 4) |
+| 5 | History paginated, filterable, JOIN'd shape, exactly 2 SQL statements per page | ✓ | §MOVE-08 (envelope) + §MOVE-09 (zero-N+1 postgres log evidence) (Criterion 5) |
+
+**Score: 5/5 ROADMAP success criteria verified.** Three are fully automated at the API + DB plane (1, 3, 5). Two combine API-plane evidence with source-grep on the frontend contracts (2, 4) and complete with manual UAT items §"Manual UAT items" #1, #2, #3, #5 for the visual / keyboard / focus surface in a real browser.
+
+---
+
+## Known Limitations / Phase 4 Hand-off
+
+| Item | Why deferred | Phase 4 task |
+| ---- | ------------ | ------------ |
+| Live-browser tab-strip keyboard testing (ArrowLeft/Right/Home/End/Enter activation, focus visibility, screen-reader announcement on tab swap) | This plan ships no browser-driver (Playwright/Cypress not in scope until Phase 4) | Cover via §"Manual UAT items" #5 (real browser) + Phase 4 component test |
+| Vitest unit/component tests for InboundForm / OutboundForm / ConfirmOutboundModal / MovementHistory / useStockMovements | Phase 4 explicitly owns Vitest + Vue Test Utils setup | Mount each component, assert against the locked copy + state transitions verified by source grep here |
+| xUnit tests for StockMovementService (transactional path + 23505 race recovery) + StockMovementRepository (zero-N+1 SQL shape) | Phase 4 owns xUnit + Moq setup | Re-use the verbatim happy/unhappy curl matrix above as test fixtures |
+| Branded PDF docs (`docs/01-product-decisions.md`, `02-architecture.md`, `03-business-rules.md`) covering the catalog of error codes / movement lifecycle / Idempotency contract | Phase 4 owns Pandoc + WeasyPrint + mermaid-filter pipeline | Reference this verification doc as the source of truth for the business-rules and errorCode catalog entries |
+| "Saldo após" historical column in MovementHistory (running balance per row) | Intentionally NOT persisted in v1 — would couple history to a derived field that drifts under concurrent writes | Out of scope; if a future requirement adds this, compute it server-side from the windowed sum, not via a persisted column |
+| Live-browser CONF-01 modal flow (autofocus on Cancelar, Esc to close, INSUFFICIENT_BALANCE keeping the modal open) | Plan 03-05 verified the locked copy + structural ARIA in source; live focus/keyboard observation requires a browser | §"Manual UAT items" #1, #2, #3 |
+
+These items are explicitly NOT blockers for Phase 3 completion — the API + DB plane is fully verified, the SPA bundle loads, the source-level contracts are grep-locked. Phase 4 picks up the browser-level + test-coverage surface.
+
+---
+
+## Self-Check: PASSED
+
+**Files verified to exist:**
+
+- FOUND: `.planning/phases/03-stock-movements-vertical-slice/03-VERIFICATION.md`
+- FOUND: `README.md` (modified — `/api/stock-movements` + Idempotency-Key + `/stock-movements?tab=…` + CONF-01 mention + immutability + zero-N+1 surface)
+- FOUND (regression-clean, untouched): `backend/Inventory/` source tree (Plan 03-01 + 03-03)
+- FOUND (regression-clean, untouched): `frontend/src/features/stock/` (Plan 03-02 + 03-04)
+- FOUND (regression-clean, untouched): `init.sql` (Phase 1 — `stock_movements` + `products` schemas)
+
+**Commits to be verified after the final docs commit:** see `03-05-SUMMARY.md` commit list.
+
 
 
 

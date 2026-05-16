@@ -77,7 +77,7 @@ A documentação detalhada (decisões de produto, arquitetura com diagramas Merm
 |------|---------|--------|
 | 1. Foundation | docker-compose end-to-end com health check | entregue |
 | 2. Products Vertical Slice | CRUD de produtos com soft delete + validação | entregue |
-| 3. Stock Movements Vertical Slice | entradas/saídas com idempotência + saldo | próxima |
+| 3. Stock Movements Vertical Slice | entradas/saídas com idempotência + saldo | entregue |
 | 4. Tests, Docs & Polish | xUnit + Vitest + 3 PDFs branded em `docs/dist/` | final |
 
 ## Endpoints (v1)
@@ -91,15 +91,19 @@ Após `docker compose up`, a API expõe:
 | GET | `http://localhost:8080/api/products` | Lista paginada (params `page`, `pageSize`, `includeDeleted`) — `operationId: listProducts`. |
 | GET | `http://localhost:8080/api/products/{id}` | Detalha produto (retorna mesmo se soft-deletado) — `operationId: getProduct`. |
 | DELETE | `http://localhost:8080/api/products/{id}` | Soft-delete (preserva histórico) — `operationId: deleteProduct`. |
-
-Endpoints de movimentação (`/api/stock-movements`) chegam em Phase 3.
+| POST | `http://localhost:8080/api/stock-movements` | Registra movimentação de estoque (Entrada ou Saída). **Requer header `Idempotency-Key: <UUID v4>`** — replay com mesma chave retorna `200 OK` + header `Idempotency-Replay: true` + body byte-idêntico ao da primeira resposta. `operationId: createStockMovement`. |
+| GET | `http://localhost:8080/api/stock-movements` | Histórico paginado com filtros opcionais `productId`, `startDate`, `endDate`, `page`, `pageSize` (padrão 30, máx 100). Cada item já carrega `productCode` + `productDescription` via JOIN (zero N+1 — exatamente 2 statements SQL por página). `operationId: listStockMovements`. |
+| GET | `http://localhost:8080/api/stock-movements/{id}` | Detalha movimento. `operationId: getStockMovement`. |
 
 ## Agentic-friendly API
 
 Toda resposta segue o padrão pensado pra consumo por LLM:
 
-- **`operationId` estável camelCase verb-noun** — `createProduct`, `listProducts`, `getProduct`, `deleteProduct`. Estáveis entre versões — vira tool name no chat v2.
-- **`errorCode` SCREAMING_SNAKE_CASE com vocabulário fechado** — `VALIDATION_ERROR`, `DUPLICATE_CODE`, `PRODUCT_NOT_FOUND`, `INTERNAL_ERROR`. Phase 3 adiciona movimentos.
+- **`operationId` estável camelCase verb-noun** — `createProduct`, `listProducts`, `getProduct`, `deleteProduct`, `createStockMovement`, `listStockMovements`, `getStockMovement`. Estáveis entre versões — vira tool name no chat v2.
+- **`errorCode` SCREAMING_SNAKE_CASE com vocabulário fechado** — `VALIDATION_ERROR`, `DUPLICATE_CODE`, `PRODUCT_NOT_FOUND`, `INTERNAL_ERROR` + Phase 3: `MISSING_IDEMPOTENCY_KEY`, `INSUFFICIENT_BALANCE`, `PRODUCT_DELETED`, `INVALID_MOVEMENT_VALUES`, `MOVEMENT_NOT_FOUND`.
+- **Idempotência obrigatória em mutações de movimento** — `POST /api/stock-movements` exige header `Idempotency-Key` (UUID v4). Replay com a mesma chave retorna `200 OK` + header `Idempotency-Replay: true` + body byte-idêntico ao da primeira resposta — sem efeito colateral duplicado, mesmo sob race-condition (recovery via `pg_unique_violation` SqlState `23505`).
+- **Movimentações são imutáveis** (MOVE-11) — `PUT /api/stock-movements/{id}` e `DELETE /api/stock-movements/{id}` retornam `405 Method Not Allowed`. Histórico é auditoria.
+- **Zero N+1 em histórico** — `GET /api/stock-movements?pageSize=100` emite **exatamente 2 statements SQL** (um JOIN'd SELECT + um COUNT), independentemente do `pageSize`. Items já carregam `productCode` + `productDescription` via JOIN.
 - **`hint` dinâmica em PT-BR**, construída com dados reais do erro (não genérica). Ex.: para código duplicado, a hint cita o código conflitante.
 - **HATEOAS `_links`** em respostas de recurso (`self`, `delete` quando aplicável) e em listagens (`self`, `first`, `last`, `next`, `prev`).
 - **Enums serializados como string** (`"Electronic"`, não `0`) via `JsonStringEnumConverter` global.
@@ -132,6 +136,15 @@ Exemplo de erro canônico:
 - Toggle **"Mostrar excluídos"** reabre produtos arquivados (badge `Excluído`).
 - Formatação BR de moeda (`R$ 1.234,56`), data (`dd/mm/yyyy HH:mm`) e quantidade.
 - Toasts consomem `apiError.hint ?? apiError.message` (D-09) — erros de rede surgem como `"Não foi possível conectar. Verifique sua conexão e tente novamente."`.
+
+`http://localhost:5173/stock-movements?tab=entrada|saida|historico` (default `historico`):
+
+- **Tab strip composta inline** com WAI-ARIA tabs (`role="tablist"` + roving `tabindex` + Arrow/Home/End/Enter/Space) e URL `?tab=` como fonte da verdade — navegação por teclado conforme spec. Painéis fecham com `v-if` (não `v-show`) para garantir que validators e fetches só rodem na aba ativa.
+- **Entrada** vai direto (sem confirmação) — atualiza `stock_quantity` e `supplier_value` na mesma transação (MOVE-01 + MOVE-06).
+- **Saída** abre **modal de confirmação CONF-01** com resumo completo (Produto / Quantidade / Valor de venda / Saldo atual / **Saldo resultante**) — autofocus em "Cancelar" (botão seguro), Confirmar é brand-primary (NÃO destrutivo).
+- **Histórico** mostra tabela paginada com 4 estados (loading / empty / filter-empty / error / dados) + filtros `productId` (300 ms debounce), `startDate`, `endDate` sincronizados com a URL. Tabela é **não-interativa** (sem linha clicável) — movimentos são imutáveis (MOVE-11; sem `PUT`, `DELETE`, `PATCH`).
+- **Idempotência transparente**: cada `POST /api/stock-movements` envia `Idempotency-Key` (UUID v4 gerado pelo cliente via `crypto.randomUUID()`) — se o servidor retornar `200 OK` + `Idempotency-Replay: true`, a UI trata como sucesso normal (D-07; sem banner de "você já enviou").
+- **Helper Disponível** em tempo real no formulário de Saída — surface do saldo do produto selecionado, com `aria-live="polite"` para anunciar mudanças. Se a API responder `INSUFFICIENT_BALANCE`, o helper se atualiza a partir de `apiError.details.available` (D-08 race-mitigation).
 
 ## Variáveis de configuração
 
