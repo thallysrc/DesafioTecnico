@@ -74,7 +74,15 @@ builder.Services.AddSwaggerGen(c =>
 // -------------------------------------------------------------------------------------------------
 builder.Services.AddSingleton<IDbConnectionFactory, DbConnectionFactory>();
 
-// Repositories + Services land in Phase 2.
+// -------------------------------------------------------------------------------------------------
+// Repositories — Scoped (interface + impl per BACK-08).
+// -------------------------------------------------------------------------------------------------
+builder.Services.AddScoped<Inventory.Api.Repositories.IProductRepository, Inventory.Api.Repositories.ProductRepository>();
+
+// -------------------------------------------------------------------------------------------------
+// Services — Scoped (concrete classes, no interface per BACK-08).
+// -------------------------------------------------------------------------------------------------
+builder.Services.AddScoped<Inventory.Api.Services.ProductService>();
 
 var app = builder.Build();
 
