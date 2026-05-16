@@ -80,7 +80,13 @@ Plans:
   3. Attempting to outbound more than available shows a friendly toast with the API's dynamic hint (e.g., "Reduza a quantidade para no máximo 3 ou registre uma entrada antes") — error is `422 INSUFFICIENT_BALANCE` with `details` containing requested/available/deficit
   4. Idempotency works end-to-end: frontend `crypto.randomUUID()` generates an `Idempotency-Key` header per submit; submitting twice with the same key returns the same movement with `Idempotency-Replay: true` header (status 200, not 201); omitting the header returns `400 MISSING_IDEMPOTENCY_KEY`
   5. `/stock-movements` history is paginated, filterable by `productId`, `startDate`, `endDate`, and the listing endpoint emits **exactly two SQL queries** (one JOIN'd SELECT + one COUNT) regardless of page size — no N+1; movements of soft-deleted products remain visible in the history
-**Plans**: TBD
+**Plans**: 5 plans
+Plans:
+- [ ] 03-01-PLAN.md — Backend foundation: entities + DTOs + IStockMovementRepository (JOIN'd, zero N+1) + CreateMovementRequestValidator + 5 typed exceptions + ExceptionHandlingMiddleware doc (MOVE-02/04/05/07/08/09/10/11)
+- [ ] 03-02-PLAN.md — Frontend feature primitives: types + api (FRONT-12 Idempotency-Key) + Zod schemas + useStockMovements composable + extend labels.ts with movementTypeLabel (FRONT-12)
+- [ ] 03-03-PLAN.md — Backend service + controller + DI: transactional CreateAsync (SELECT FOR UPDATE + idempotency replay + 23505 race-window) + StockMovementsController with 3 operationIds + Program.cs (MOVE-01..11)
+- [ ] 03-04-PLAN.md — Frontend components: InboundForm + OutboundForm (UX-08 Disponível + balance pre-check) + ConfirmOutboundModal (CONF-01 verbatim) + MovementHistory (4-state + filters) + StockMovementsPage rewrite (tab strip ARIA) (CONF-01)
+- [ ] 03-05-PLAN.md — End-to-end smoke: docker compose stack + MOVE-01..11 curl matrix + zero-N+1 pg_stat_statements evidence + Swagger contract + SPA + CONF-01 grep + README touchup
 **UI hint**: yes
 
 ### Phase 4: Tests, Docs & Polish
