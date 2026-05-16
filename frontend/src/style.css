@@ -1,0 +1,19 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  body {
+    @apply font-sans text-ink bg-white;
+  }
+
+  /* Keep a visible focus ring on all interactive elements (UI-SPEC §"Accessibility Floor"). */
+  *:focus-visible {
+    @apply outline-none ring-2 ring-brand-500 ring-offset-1;
+  }
+}
