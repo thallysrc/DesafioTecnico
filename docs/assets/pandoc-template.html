@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html lang="$lang$">
+<head>
+  <meta charset="utf-8">
+  <title>$title$</title>
+  <link rel="stylesheet" href="assets/pdf-style.css">
+$for(css)$
+  <link rel="stylesheet" href="$css$">
+$endfor$
+</head>
+<body>
+  <header class="cover">
+    <div class="wordmark">Stock<span class="accent">Easy</span></div>
+    <div class="doctitle">$title$</div>
+    <div class="meta">$if(date)$$date$ · $endif$Desafio Técnico</div>
+  </header>
+  $body$
+</body>
+</html>
