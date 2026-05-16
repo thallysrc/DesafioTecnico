@@ -725,3 +725,103 @@ dist/assets/index-apzJXUgL.js               153.97 kB │ gzip: 59.44 kB
 > vue-tsc --noEmit
 
 ```
+
+## Manual UAT — User-Driven Smoke
+
+**Host environment:** No Chromium for headless browser drive — the three steps below are documented as the user-facing flow. Steps 1 + 3 require human interaction (a browser); step 2 has been **partially automated** by stopping the backend and observing the proxy/upstream behavior, then restarting it — the actual toast surfacing on the Vue side is observed manually.
+
+### Step 1 — Drawer-create flow (happy path)
+
+**Status:** PENDING human (requires browser)
+
+**Steps:**
+
+1. User opens `http://localhost:5173/products`.
+2. Clicks the **Cadastrar produto** button (top-right of the page).
+3. Fills the drawer form:
+   - `code`: `UAT-01`
+   - `description`: `UAT teste`
+   - `type`: `Eletrônico` (translates to `Electronic` on the wire)
+   - `supplierValue`: types `1234,56` (BR-locale; mask renders `1.234,56` on blur)
+   - `initialStockQuantity`: `10`
+4. Clicks **Cadastrar**.
+
+**Expected:**
+
+- Success toast appears at bottom-right: `Produto cadastrado com sucesso` (green, 3s auto-dismiss).
+- The new row appears at the **top of the list** (created_at DESC sort).
+- Drawer closes.
+- URL stays at `/products` (no route change).
+
+**Backend wire** (CONF-03 — create submits directly, no confirmation modal between submit and POST):
+
+```bash
+# What the SPA does when the user clicks Cadastrar (via Vite proxy):
+curl -X POST http://localhost:5173/api/products \
+  -H "Content-Type: application/json" \
+  -d '{"code":"UAT-01","description":"UAT teste","type":"Electronic","supplierValue":1234.56,"initialStockQuantity":10}'
+```
+
+### Step 2 — Backend-down network-error toast (D-09)
+
+**Status:** PARTIALLY AUTOMATED — see captured probe below. The full toast-surface observation requires the human at the browser.
+
+**Steps:**
+
+1. `docker compose stop backend` (executed below).
+2. In the open browser at `/products`, click **Tentar novamente** on the error state (or refresh the page).
+3. After observing the toast, `docker compose start backend` and click retry — list loads.
+
+**Probe (captured live from host):**
+
+```text
+Backend stopped: curl -s http://localhost:8080/api/products → status: 000 (0 = no response, expected)
+Via Vite proxy: curl -s http://localhost:5173/api/products → status: 500
+Backend restarted: health returned in 5s
+```
+
+**Expected toast text** (locked by D-09 in `frontend/src/shared/api/client.ts`, mirrors UI-SPEC line 540 verbatim):
+
+> Não foi possível conectar. Verifique sua conexão e tente novamente.
+
+**Source verification** — the literal hint string exists in the Axios interceptor's NETWORK_ERROR fallback at `frontend/src/shared/api/client.ts`:
+
+```bash
+$ grep -c 'Não foi possível conectar' frontend/src/shared/api/client.ts
+1
+```
+
+**Acceptance:** the toast surfaces this exact text (NOT a stack trace, NOT the generic Axios "Network Error"). The interceptor catches the rejection without a response body and emits an `ApiError` with `errorCode: NETWORK_ERROR` + locked `hint`; the page's catch block reads `apiError.hint ?? apiError.message` and dispatches `toast.error(...)`.
+
+### Step 3 — Soft-delete via confirmation modal (CONF-02)
+
+**Status:** PENDING human (requires browser; backend round-trip already automated in Task 1, scenarios 9-12).
+
+**Steps:**
+
+1. Open the detail drawer for any product (click the row).
+2. Click **Excluir produto** (visible only when `deletedAt` is null).
+3. The confirmation modal opens with:
+   - **Title:** `Excluir produto?`
+   - **Body:** `Esta ação marca o produto como excluído. O histórico de movimentações permanece visível.` (per CONF-02 lockstep copy)
+   - **Buttons:** `Cancelar` (left, secondary) + `Excluir` (right, destructive)
+4. Press **Excluir**.
+
+**Expected:**
+
+- Modal closes.
+- Detail drawer closes.
+- Success toast: `Produto excluído` (green, 3s).
+- List refetches; the deleted row disappears (unless `Mostrar excluídos` toggle is on, then it shows with `opacity-60` + `Excluído` badge).
+
+Backend round-trip behavior is already proven in scenarios 9-12 of the Endpoint Smoke Matrix above.
+
+### Summary
+
+| Step | Description | Status |
+|------|-------------|--------|
+| 1 | Drawer-create happy path (CONF-03 direct submit) | PENDING human |
+| 2 | Backend-down → 'Não foi possível conectar' toast (D-09) | PARTIALLY AUTOMATED — interceptor source verified, host probe captured |
+| 3 | Soft-delete via CONF-02 modal | PENDING human (backend round-trip auto-proven) |
+
+The interceptor's locked NETWORK_ERROR hint is verifiable today; the toast surfacing is the only browser-bound observation pending human signoff.

@@ -75,10 +75,63 @@ A documentação detalhada (decisões de produto, arquitetura com diagramas Merm
 
 | Fase | Entrega | Status |
 |------|---------|--------|
-| 1. Foundation | docker-compose end-to-end com health check | em entrega |
-| 2. Products Vertical Slice | CRUD de produtos com soft delete + validação | próxima |
-| 3. Stock Movements Vertical Slice | entradas/saídas com idempotência + saldo | depois |
+| 1. Foundation | docker-compose end-to-end com health check | entregue |
+| 2. Products Vertical Slice | CRUD de produtos com soft delete + validação | entregue |
+| 3. Stock Movements Vertical Slice | entradas/saídas com idempotência + saldo | próxima |
 | 4. Tests, Docs & Polish | xUnit + Vitest + 3 PDFs branded em `docs/dist/` | final |
+
+## Endpoints (v1)
+
+Após `docker compose up`, a API expõe:
+
+| Método | Caminho | Descrição |
+|--------|---------|-----------|
+| GET | `http://localhost:8080/api/health` | Health probe (status + Postgres connectivity). |
+| POST | `http://localhost:8080/api/products` | Cadastra novo produto (`operationId: createProduct`). |
+| GET | `http://localhost:8080/api/products` | Lista paginada (params `page`, `pageSize`, `includeDeleted`) — `operationId: listProducts`. |
+| GET | `http://localhost:8080/api/products/{id}` | Detalha produto (retorna mesmo se soft-deletado) — `operationId: getProduct`. |
+| DELETE | `http://localhost:8080/api/products/{id}` | Soft-delete (preserva histórico) — `operationId: deleteProduct`. |
+
+Endpoints de movimentação (`/api/stock-movements`) chegam em Phase 3.
+
+## Agentic-friendly API
+
+Toda resposta segue o padrão pensado pra consumo por LLM:
+
+- **`operationId` estável camelCase verb-noun** — `createProduct`, `listProducts`, `getProduct`, `deleteProduct`. Estáveis entre versões — vira tool name no chat v2.
+- **`errorCode` SCREAMING_SNAKE_CASE com vocabulário fechado** — `VALIDATION_ERROR`, `DUPLICATE_CODE`, `PRODUCT_NOT_FOUND`, `INTERNAL_ERROR`. Phase 3 adiciona movimentos.
+- **`hint` dinâmica em PT-BR**, construída com dados reais do erro (não genérica). Ex.: para código duplicado, a hint cita o código conflitante.
+- **HATEOAS `_links`** em respostas de recurso (`self`, `delete` quando aplicável) e em listagens (`self`, `first`, `last`, `next`, `prev`).
+- **Enums serializados como string** (`"Electronic"`, não `0`) via `JsonStringEnumConverter` global.
+- **Soft-delete** com `deleted_at` — produtos deletados ficam recuperáveis via `GET /api/products/{id}` e listáveis com `?includeDeleted=true`. Códigos NÃO são reutilizáveis (anti-reuso por UNIQUE total).
+- **OpenAPI rica** em `http://localhost:8080/swagger` — XML doc em cada campo, `[ProducesResponseType]` para cada status code (201/200/204/400/404/422).
+
+Exemplo de erro canônico:
+
+```json
+{
+  "errorCode": "DUPLICATE_CODE",
+  "category": "BUSINESS_RULE",
+  "message": "Já existe um produto com código 'P001'.",
+  "hint": "Já existe um produto com código 'P001'. Use outro código ou recupere o produto via /api/products?includeDeleted=true.",
+  "statusCode": 422,
+  "retryable": false,
+  "details": { "code": "P001" },
+  "traceId": "...",
+  "timestamp": "2026-05-16T..."
+}
+```
+
+## Frontend (v1)
+
+`http://localhost:5173/products`:
+
+- Lista paginada com 4 estados (loading skeleton / empty CTA / error com retry / dados).
+- Cadastro em **side drawer** com Vee-Validate + Zod (mensagens PT-BR espelhadas byte-for-byte do FluentValidation no backend).
+- Detalhe + **soft-delete** via modal de confirmação (CONF-02, copy locked: "Excluir produto?" — "Esta ação marca o produto como excluído. O histórico de movimentações permanece visível.").
+- Toggle **"Mostrar excluídos"** reabre produtos arquivados (badge `Excluído`).
+- Formatação BR de moeda (`R$ 1.234,56`), data (`dd/mm/yyyy HH:mm`) e quantidade.
+- Toasts consomem `apiError.hint ?? apiError.message` (D-09) — erros de rede surgem como `"Não foi possível conectar. Verifique sua conexão e tente novamente."`.
 
 ## Variáveis de configuração
 
