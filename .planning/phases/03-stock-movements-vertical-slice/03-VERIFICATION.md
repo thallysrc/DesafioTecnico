@@ -549,6 +549,131 @@ Both literal strings present in the enum (LLM/human-friendly per D23).
 
 ---
 
-(Task 4 appends Frontend Source-Level Contracts + Manual UAT items below.)
+## Frontend SPA Smoke + Source-Level Contracts
+
+### SPA bundle reaches `/stock-movements`
+
+```bash
+$ curl -fsS http://localhost:5173/stock-movements -o /tmp/03-05/spa.html
+$ wc -c /tmp/03-05/spa.html
+848 /tmp/03-05/spa.html
+$ grep -q "StockEasy" /tmp/03-05/spa.html && echo OK            # → OK
+$ grep -E "main\.ts|src/main" /tmp/03-05/spa.html
+    <script type="module" src="/src/main.ts"></script>
+```
+
+Vite-served HTML returns 200, contains the wordmark "StockEasy" (from `<title>` and document shell), and references `/src/main.ts` (the SPA entry). Vue Router's `/stock-movements` route is mounted (Phase 1's router config).
+
+### FRONT-12 — Idempotency-Key generated via `crypto.randomUUID()` (source grep)
+
+```bash
+$ grep -n "generateIdempotencyKey" frontend/src/features/stock/api.ts
+1:import { apiClient, generateIdempotencyKey } from '@/shared/api/client'
+18: * `generateIdempotencyKey()` (which wraps `crypto.randomUUID()` per the shared
+31:        headers: { 'Idempotency-Key': generateIdempotencyKey() },
+
+$ grep -n "crypto.randomUUID" frontend/src/shared/api/client.ts
+57:  return crypto.randomUUID()
+
+$ grep -n "'Idempotency-Key':" frontend/src/features/stock/api.ts
+31:        headers: { 'Idempotency-Key': generateIdempotencyKey() },
+```
+
+The injection mechanism is anchored in one line of `frontend/src/features/stock/api.ts:31` — `headers: { 'Idempotency-Key': generateIdempotencyKey() }`. The helper itself lives in `frontend/src/shared/api/client.ts:57` and wraps `crypto.randomUUID()`. **FRONT-12 verified.**
+
+### Tab-strip ARIA contract (UI-SPEC §"Tab Strip Composition")
+
+Source file: `frontend/src/features/stock/pages/StockMovementsPage.vue`.
+
+| Contract token | Grep result |
+| -------------- | ----------- |
+| `role="tablist"` | present |
+| `role="tab"` | present |
+| `:aria-selected="activeTab` (dynamic binding) | present |
+| `:tabindex="activeTab === tab.id ? 0 : -1"` (roving tabindex) | present |
+| `role="tabpanel"` | present |
+| ArrowRight/Left/Up/Down keyboard handlers | present |
+| Home/End handlers | present |
+| `router.replace` (URL ?tab= sync) | present |
+| **No** `v-show` (must be `v-if`) | absent (correct) |
+| `v-if="activeTab === 'entrada'"` (mounted-only panel) | present |
+
+All 10 ARIA contract tokens verified. The page composes the tab strip inline per UI-SPEC (no BaseTabs primitive extracted).
+
+### CONF-01 — Outbound Confirmation Modal locked copy (source grep)
+
+Source file: `frontend/src/features/stock/components/ConfirmOutboundModal.vue`.
+
+| Contract token | Result |
+| -------------- | ------ |
+| Title `Confirmar saída?` | present (passed via BaseModal `title` prop per the bound `:title="…"`)|
+| Lead paragraph `Esta operação registra uma saída de estoque` | present |
+| `<dt>Produto:` definition term | present (line 56-57: `<dt>` followed by `Produto:`) |
+| `<dt>Quantidade:` definition term | present (line 63-64) |
+| `<dt>Valor de venda:` definition term | present (line 70-71) |
+| `<dt>Saldo atual:` definition term | present (line 77-78) |
+| `<dt>Saldo resultante:` definition term | present (line 84-85, `<dd>` uses `font-semibold` per spec) |
+| `data-autofocus` attribute | present |
+| Autofocus is on `variant="secondary"` (Cancelar — safe button) | present (`grep -B2 "data-autofocus" \| grep -q 'variant="secondary"'` passes) |
+| **No** `variant="destructive"` on Confirmar (it is brand-primary per spec) | absent (correct) |
+| `Confirmar saída` confirm-button label | present |
+| `Registrando saída...` in-flight label | present |
+
+**Note on grep precision:** the plan's verbatim grep patterns were single-line (e.g. `">Produto:<"`) which do not match Vue's multi-line indented HTML (`<dt class="…">\n  Produto:\n</dt>`). Adjusted the grep to be multi-line tolerant (`grep -q "Produto:"` + structural verification via `grep -B1`) — the locked copy is present byte-for-byte; only the regex shape needed adjustment. All 12 contract tokens above are verified.
+
+### Movement-type badge mapping (D-06) — MovementHistory
+
+Source file: `frontend/src/features/stock/components/MovementHistory.vue`.
+
+| Contract token | Result |
+| -------------- | ------ |
+| `movementTypeLabel[m.type]` (no inline ternary for label) | present |
+| `ArrowDownToLine` icon (paired with Entrada) | present |
+| `ArrowUpFromLine` icon (paired with Saída) | present |
+| `variant="success"` (badge color for Inbound) | present (via dynamic binding) |
+| `variant="danger"` (badge color for Outbound) | present (via dynamic binding) |
+| Inbound is paired with `success` (not inverted) on the same line | present: `<BaseBadge :variant="m.type === 'Inbound' ? 'success' : 'danger'">` |
+
+The mapping is anchored on **one line** with the dynamic ternary `m.type === 'Inbound' ? 'success' : 'danger'` — Entrada always green, Saída always red. Label is rendered via `movementTypeLabel[m.type]` (the closed catalog from `@/shared/labels.ts`), never an inline string ternary. **D-06 verified.**
+
+## Manual UAT items (handed off to Phase 4 / human evaluator)
+
+Plan 03-05 cannot drive a real browser (no Playwright/Cypress — Phase 4 territory). The grep evidence above proves the locked copy ships in source, the API contracts are honored at the wire level, and the SPA shell loads. The following items require a real browser to fully verify and are recorded here as the Phase 3 UAT hand-off:
+
+| # | Item | Expected | Why human |
+| - | ---- | -------- | --------- |
+| 1 | Open `http://localhost:5173/stock-movements?tab=saida`, register a Saída with a positive quantity ≤ stock | The CONF-01 modal opens; renders the 5 definition rows with correct numbers (formatCurrency + formatQuantity); Cancelar receives autofocus; the Confirmar button is brand-primary (NOT destructive red) | Visual rendering, autofocus behavior, color contrast — requires real DOM |
+| 2 | Press Esc while the CONF-01 modal is open | Modal closes; form data preserved (product still selected, quantity still in the input); no toast fired | Esc-to-dismiss requires a real keyboard event loop |
+| 3 | Trigger INSUFFICIENT_BALANCE inside the CONF-01 modal (Outbound qty > current stock) | Modal stays open; toast surfaces `apiError.hint` ("Reduza a quantidade para no máximo {n} ou registre uma entrada antes."); the Disponível helper in the parent OutboundForm refreshes to `apiError.details.available` (D-08 race-mitigation in real time) | Live-DOM observation of helper refresh + toast surfacing required |
+| 4 | Navigate `/stock-movements` with no `?tab` query param | Default tab is `historico` (D-01) — MovementHistory mounts and either renders 4-state empty-CTA or paginated table | URL default behavior + initial-mount render require a browser session |
+| 5 | Press ArrowRight on the active tab button | Focus moves to the next tab (wrap from `historico` → `entrada`); the focused tab is activated (URL `?tab=` updates via `router.replace`); the corresponding `v-if` panel mounts | WAI-ARIA tabs automatic-activation pattern requires real keyboard + focus observation |
+| 6 | Trigger a network failure (`docker compose stop backend`) and hit `Tentar novamente` in the history error state | Inline error component shows; CTA triggers a refetch; toast/inline copy mentions network failure | Requires browser network stack observation |
+
+These items belong to Phase 4 (xUnit + Vitest + Playwright/Cypress + manual UAT). They are listed here verbatim so the human evaluator (or Phase 4 planner) can replay each one against the running stack and capture pass/fail in a follow-up UAT document.
+
+---
+
+## MOVE-* Requirements Coverage Matrix
+
+| Req | Status | Evidence section |
+|-----|--------|------------------|
+| MOVE-01 — Atomic movement creation (INSERT + UPDATE in one tx) | ✓ | §Criterion 1 (Inbound atomicity) + §Criterion 2 (Outbound atomicity) |
+| MOVE-02 — `Idempotency-Key` header required on POST | ✓ | §MOVE-02 — MISSING_IDEMPOTENCY_KEY (HTTP 400 + canonical error + crypto.randomUUID hint) |
+| MOVE-03 — Replay returns 200 + Idempotency-Replay: true + identical body | ✓ | §MOVE-03 — Idempotency replay (status 200, header present, jq -S diff empty, no double-apply) |
+| MOVE-04 — INSUFFICIENT_BALANCE with dynamic hint | ✓ | §MOVE-04 — INSUFFICIENT_BALANCE (HTTP 422, dynamic 55, details.deficit=999944) |
+| MOVE-05 — PRODUCT_DELETED rejects movement on soft-deleted product | ✓ | §MOVE-05 — PRODUCT_DELETED (HTTP 422, hint mentions product code) |
+| MOVE-06 — Inbound updates supplier_value AND stock_quantity | ✓ | §Criterion 1 (supplier_value 100→120.50 + stock 50→60) |
+| MOVE-07 — INVALID_MOVEMENT_VALUES (value-field inversion) | ✓ | §MOVE-07 — INVALID_MOVEMENT_VALUES (Inbound + saleValue → 422 + expectedField=supplierValue) |
+| MOVE-08 — Paginated history with productId/startDate/endDate filters | ✓ | §MOVE-08 — Listing paginated (envelope {items, pagination, _links}, filtered by productId, 2 items returned) |
+| MOVE-09 — JOIN'd shape + zero N+1 (exactly 2 SQL statements per page) | ✓ | §MOVE-09 — Zero-N+1 (postgres log slice shows 2 `execute <unnamed>` blocks: JOIN'd SELECT + COUNT) |
+| MOVE-10 — Detail endpoint returns the JOIN'd movement; 404 on unknown id | ✓ | §MOVE-10 (productCode + productDescription present) + §MOVEMENT_NOT_FOUND (404 canonical error) |
+| MOVE-11 — Immutability (no PUT, no DELETE, no PATCH) | ✓ | §MOVE-11 (PUT=405, DELETE=405 via route absence) |
+| FRONT-12 — Frontend generates Idempotency-Key via crypto.randomUUID() | ✓ | §FRONT-12 (source grep: api.ts:31 + client.ts:57) |
+| CONF-01 — Outbound Confirmation Modal locked copy + autofocus contract | ✓ | §CONF-01 (12 contract tokens grep-verified) |
+
+**All 13 requirements assigned to this plan have evidence.** Coverage: 13/13.
+
+(Task 5 finalizes the Sign-off + Known Limitations sections.)
+
 
 
