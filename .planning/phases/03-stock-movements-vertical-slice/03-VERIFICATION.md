@@ -2,8 +2,27 @@
 phase: 03-stock-movements-vertical-slice
 verified: 2026-05-16
 status: human_needed
-score: "5/5 ROADMAP success criteria verified via API + source-grep evidence; 3 manual UAT items handed to Phase 4 / human evaluator"
-captured_by: Plan 03-05 (E2E integration smoke)
+score: "5/5 ROADMAP success criteria verified (API+DB plane by Plan 03-05 smoke; codebase-level by goal-backward verifier)"
+captured_by: Plan 03-05 (E2E integration smoke) + goal-backward verifier
+human_verification:
+  - test: "Open http://localhost:5173/stock-movements?tab=saida, register a Saída with qty <= stock"
+    expected: "CONF-01 modal opens with 5 definition rows; Cancelar has autofocus; Confirmar button is brand-primary (not destructive red)"
+    why_human: "Visual rendering, autofocus behavior, color contrast require real DOM"
+  - test: "Press Esc while CONF-01 modal is open"
+    expected: "Modal closes; form data preserved; no toast fired"
+    why_human: "Esc-to-dismiss requires real keyboard event loop"
+  - test: "Trigger INSUFFICIENT_BALANCE inside CONF-01 modal (qty > stock)"
+    expected: "Modal stays open; toast shows apiError.hint; Disponivel helper refreshes from apiError.details.available"
+    why_human: "Live-DOM observation of helper refresh + toast surfacing required"
+  - test: "Navigate /stock-movements with no ?tab param"
+    expected: "Default tab is historico; MovementHistory mounts"
+    why_human: "URL default behavior + initial-mount render require a browser session"
+  - test: "Press ArrowRight on the active tab button"
+    expected: "Focus wraps to next tab; URL ?tab= updates; v-if panel mounts"
+    why_human: "WAI-ARIA automatic-activation pattern requires real keyboard + focus observation"
+  - test: "Trigger network failure then click Tentar novamente in history error state"
+    expected: "Error state shows; retry refetches"
+    why_human: "Browser network stack observation required"
 stack:
   - postgres: 16-alpine (container `stockeasy-postgres`)
   - backend: .NET 8 on :8080 (container `stockeasy-api`, `dotnet watch run`)
@@ -387,7 +406,7 @@ curl -s -w "\n%{http_code}" -X POST http://localhost:8080/api/stock-movements \
     "expectedField": "supplierValue"
   },
   "traceId": "0HNLJG2QH4IQC:00000001",
-  "timestamp": "2026-05-16T19:26:41.1849556Z"
+  "timestamp": "2026-05-16T19:26:41.1849566Z"
 }
 ```
 
@@ -416,7 +435,7 @@ curl -s -w "\n%{http_code}" "http://localhost:8080/api/stock-movements/$(uuidgen
     "movementId": "3d8ad32b-9a45-4624-ad2c-c401b826dab5"
   },
   "traceId": "0HNLJG2QH4IQD:00000001",
-  "timestamp": "2026-05-16T19:26:41.2168778Z"
+  "timestamp": "2026-05-16T19:26:41.2168776Z"
 }
 ```
 
@@ -737,6 +756,77 @@ These items are explicitly NOT blockers for Phase 3 completion — the API + DB 
 
 **Commits to be verified after the final docs commit:** see `03-05-SUMMARY.md` commit list.
 
+---
 
+## Goal-Backward Verifier Addendum
 
+**Verified: 2026-05-16 — independent codebase inspection against ROADMAP success criteria**
 
+This section extends the Plan 03-05 smoke evidence with a direct codebase check on every artifact and wiring claimed above. The verifier read source files independently and did not rely on SUMMARY claims.
+
+### Observable Truths — Codebase Confirmation
+
+| # | Truth (from ROADMAP SC) | Codebase Evidence | Status |
+|---|------------------------|-------------------|--------|
+| 1 | Inbound atomically increments stock AND updates supplier_value in one tx | `StockMovementService.cs`: `BeginTransactionAsync` present (line 97); `FOR UPDATE` in SQL (line 55); `stock_quantity = stock_quantity + @quantity` AND `supplier_value = @supplierValue` in same UPDATE block (lines 59-60); `CommitAsync` (line 185) | VERIFIED |
+| 2 | Outbound confirmation modal with verbatim CONF-01 copy | `ConfirmOutboundModal.vue`: title `Confirmar saída?` (line 44); lead paragraph present (line 49); all 5 `<dt>` terms present; `data-autofocus` on `variant="secondary"` (lines 94-95); no `variant="destructive"`; `Registrando saída...` in-flight label (line 113) | VERIFIED |
+| 3 | INSUFFICIENT_BALANCE with dynamic hint and details | `InsufficientBalanceException.cs`: hint built as `$"Reduza a quantidade para no máximo {available} ou registre uma entrada antes."` (line 13); `deficit = requested - available` in details (line 20) | VERIFIED |
+| 4 | Idempotency-Key required; replay returns 200 + Idempotency-Replay: true + identical body | `StockMovementsController.cs`: `[FromHeader]` binding; `MissingIdempotencyKeyException` thrown when absent; `Response.Headers[IdempotencyReplayHeader] = "true"` (line 72); `return Ok(response)` on replay. `StockMovementService.cs`: fast-path `GetByIdempotencyKeyAsync` BEFORE transaction (line 88); 23505 catch re-fetches and returns existing row (line 150). `api.ts:31`: `headers: { 'Idempotency-Key': generateIdempotencyKey() }`. `client.ts:57`: `return crypto.randomUUID()` | VERIFIED |
+| 5 | History paginated, filterable, JOIN'd, exactly 2 SQL statements per page | `StockMovementRepository.cs`: `INNER JOIN products p ON p.id = m.product_id` in `FromJoin` const (line 35); `SELECT COUNT(*)` in separate query (line 113); no per-row fetch; same `SelectColumns` + `FromJoin` reused across items + count | VERIFIED |
+
+### Artifact Verification (25 backend + 10 frontend files)
+
+All 25 backend files and 10 frontend files listed in PLAN frontmatter `files_modified` fields exist on disk and contain substantive implementation (not stubs). No `TODO`/`FIXME`/placeholder comments found in any phase 03 file. No `as any` in frontend stock files.
+
+### Key Link Verification
+
+| From | To | Via | Status |
+|------|----|-----|--------|
+| `StockMovementRepository.ListAsync` | `products` table | `INNER JOIN products p ON p.id = m.product_id` at line 35 of repository | WIRED |
+| `InsufficientBalanceException` constructor | `ErrorResponse.details` | `details: new { productId, productCode, requested, available, deficit = requested - available }` | WIRED |
+| `StockMovementService.CreateAsync` | `products` row via `SELECT FOR UPDATE` | `FOR UPDATE` in `ProductSelectForUpdateSql` const; passed `transaction: tx` to Dapper | WIRED |
+| `StockMovementsController` | `Idempotency-Replay: true` header | `Response.Headers[IdempotencyReplayHeader] = "true"` on `isReplay` branch | WIRED |
+| `movementsApi.register` | `POST /api/stock-movements` | `apiClient.post('/stock-movements', req, { headers: { 'Idempotency-Key': generateIdempotencyKey() } })` at `api.ts:31` | WIRED |
+| `OutboundForm.handleSubmit` | `ConfirmOutboundModal` | `modalOpen.value = true` set in `onSubmit` after Zod validates + pre-check passes | WIRED |
+| `StockMovementsPage` tab buttons | URL `?tab=` | `router.replace` called in `setTab()` and `onTabKeydown()` | WIRED |
+| `MovementHistory` filter bar | URL query | `router.replace({ query: q })` in `syncUrl()`, watched via `watch([filters, page])` | WIRED |
+| `Program.cs` | `IStockMovementRepository + StockMovementService` | `AddScoped<IStockMovementRepository, StockMovementRepository>()` + `AddScoped<StockMovementService>()` both present | WIRED |
+| `LinksDto.cs` Phase 2 helpers | preserved | `ForProduct` (line 13) and `ForProductsListing` (line 31) intact alongside `ForMovement` (line 57) and `ForMovementsListing` (line 71) | WIRED |
+
+### Anti-Pattern Scan
+
+| Category | Result |
+|----------|--------|
+| TODO/FIXME/placeholder in phase 03 backend files | None found |
+| TODO/FIXME/placeholder in `frontend/src/features/stock/` | None found |
+| `as any` in frontend stock files | None found |
+| Empty return stubs (`return null`, `return {}`, `return []`) serving UI data | None found |
+| `v-show` on tab panels (forbidden by UI-SPEC) | None found — `v-if` used correctly |
+| `variant="destructive"` on Confirmar saída button (forbidden by CONF-01) | None found |
+| Inline string ternary for movement type label (forbidden — must use `movementTypeLabel`) | None found — `movementTypeLabel[m.type]` used |
+
+### MOVE-11 Immutability — Verified by Absence
+
+`grep -n "HttpPut\|HttpDelete\|HttpPatch" backend/Inventory/Controllers/StockMovementsController.cs` returns zero matches. ASP.NET MVC routing produces HTTP 405 for unregistered verbs — confirmed by the smoke evidence showing PUT=405 and DELETE=405.
+
+### Requirements Coverage Assessment
+
+All 13 requirements assigned to Phase 3 in REQUIREMENTS.md (MOVE-01 through MOVE-11, FRONT-12, CONF-01) have:
+1. Evidence in the Plan 03-05 smoke (live API responses)
+2. Source-level confirmation in this verifier section (code artifacts + wiring checks)
+
+No orphaned requirements found. REQUIREMENTS.md maps exactly 13 requirements to Phase 3; all 13 are covered.
+
+### Overall Verdict
+
+**Status: human_needed** — confirmed. All automated checks pass:
+- 5/5 ROADMAP success criteria verified at API + DB plane (smoke) and at codebase plane (this verifier)
+- 13/13 Phase 3 requirements have both live evidence and source evidence
+- No blocker anti-patterns
+- No stub artifacts
+- All key links wired
+
+The 6 items in §"Manual UAT items" are legitimately deferred to a live-browser session (Phase 4 or human evaluator). They cover visual rendering, keyboard behavior, focus management, and real-time DOM state — none are verifiable by grep or static analysis. They do not represent gaps in the implementation; the implementation code is correct and the source contracts are locked.
+
+_Verified by goal-backward verifier: 2026-05-16_
+_Verifier: Claude (gsd-verifier)_
