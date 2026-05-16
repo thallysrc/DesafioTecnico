@@ -226,4 +226,203 @@ Both unsupported verbs return **HTTP 405 Method Not Allowed.** This is enforced 
 
 ---
 
-(Tasks 2-4 append sections here for MOVE-02 / MOVE-03 / MOVE-04 / MOVE-05 / MOVE-07 + replay-identical-body + Swagger + zero-N+1 + Frontend Source-Level Contracts + Manual UAT items.)
+### MOVE-02 — MISSING_IDEMPOTENCY_KEY (header absent → 400)
+
+**Request (no `Idempotency-Key` header):**
+
+```bash
+curl -s -o /tmp/missing.json -w "%{http_code}\n" -X POST http://localhost:8080/api/stock-movements \
+  -H "Content-Type: application/json" \
+  -d '{"productId":"7168c579-8259-4c0e-949b-998a7147c47f","type":"Inbound","quantity":1,"supplierValue":1}'
+```
+
+**HTTP status:** `400`
+**Response body:**
+
+```json
+{
+  "errorCode": "MISSING_IDEMPOTENCY_KEY",
+  "category": "VALIDATION",
+  "message": "Header 'Idempotency-Key' é obrigatório para registrar movimentos",
+  "hint": "Gere um UUID v4 no cliente (crypto.randomUUID()) e envie no header 'Idempotency-Key'.",
+  "statusCode": 400,
+  "retryable": true,
+  "details": null,
+  "traceId": "0HNLJG2QH4IQ5:00000001",
+  "timestamp": "2026-05-16T19:26:08.7085146Z"
+}
+```
+
+All nine canonical `ErrorResponse` fields present. Hint mentions `crypto.randomUUID()` (verified by `grep -q "crypto.randomUUID" /tmp/03-05/missing.json`). **MOVE-02 verified.**
+
+### MOVE-03 — Idempotency replay returns 200 + Idempotency-Replay header + identical body
+
+**Setup:** the original Inbound from §Criterion 1 used `Idempotency-Key: b9472614-10db-4f4a-8a03-56fe593cd226`. Posting the SAME key with the SAME body again triggers the replay path.
+
+**Request:**
+
+```bash
+curl -fsS -i -X POST http://localhost:8080/api/stock-movements \
+  -H "Content-Type: application/json" \
+  -H "Idempotency-Key: b9472614-10db-4f4a-8a03-56fe593cd226" \
+  -d '{"productId":"7168c579-8259-4c0e-949b-998a7147c47f","type":"Inbound","quantity":10,"supplierValue":120.50}'
+```
+
+**Response (full HTTP, headers + body):**
+
+```
+HTTP/1.1 200 OK
+Content-Type: application/json; charset=utf-8
+Date: Sat, 16 May 2026 19:26:17 GMT
+Server: Kestrel
+Transfer-Encoding: chunked
+Idempotency-Replay: true
+
+{"id":"e3de56ef-4e8e-426a-a953-5e331f8bbd8f","productId":"7168c579-...","productCode":"P3-SMOKE-001","productDescription":"Phase 3 smoke product","type":"Inbound","quantity":10,"supplierValue":120.50,"saleValue":null,"idempotencyKey":"b9472614-10db-4f4a-8a03-56fe593cd226","occurredAt":"2026-05-16T19:24:22.312105Z","createdAt":"2026-05-16T19:24:22.312105Z","_links":{...}}
+```
+
+**Status line:** `HTTP/1.1 200 OK` (NOT 201).
+**Replay header:** `Idempotency-Replay: true` (verified by `echo "$REPLAY_FULL" | grep -i "^Idempotency-Replay:" | grep -qi "true"`).
+**Body identity:** `diff <(echo "$INBOUND_BODY" | jq -S '.') <(echo "$REPLAY_BODY" | jq -S '.')` → **no output (zero diff, exit 0).** Every field is byte-identical: `id`, `idempotencyKey`, `occurredAt`, `createdAt`, `supplierValue`, etc. No "createdAt updated on replay", no "new id", no random rebuild.
+
+**Side-effect proof:** after the replay, the product state is still `{stockQuantity: 55, supplierValue: 120.50}` — the replay did NOT double-apply the +10 stock bump. **MOVE-03 verified.**
+
+### MOVE-04 — INSUFFICIENT_BALANCE with dynamic hint + structured details
+
+**Request (Outbound qty=999999 against product with stock=55):**
+
+```bash
+curl -s -w "\n%{http_code}" -X POST http://localhost:8080/api/stock-movements \
+  -H "Content-Type: application/json" -H "Idempotency-Key: $(uuidgen)" \
+  -d '{"productId":"7168c579-...","type":"Outbound","quantity":999999,"saleValue":1.00}'
+```
+
+**HTTP status:** `422`
+**Response body:**
+
+```json
+{
+  "errorCode": "INSUFFICIENT_BALANCE",
+  "category": "BUSINESS_RULE",
+  "message": "Saldo insuficiente: solicitado 999999 unidades, disponível 55",
+  "hint": "Reduza a quantidade para no máximo 55 ou registre uma entrada antes.",
+  "statusCode": 422,
+  "retryable": false,
+  "details": {
+    "productId": "7168c579-8259-4c0e-949b-998a7147c47f",
+    "productCode": "P3-SMOKE-001",
+    "requested": 999999,
+    "available": 55,
+    "deficit": 999944
+  },
+  "traceId": "0HNLJG2QH4IQ8:00000001",
+  "timestamp": "2026-05-16T19:26:26.1301069Z"
+}
+```
+
+- `errorCode == "INSUFFICIENT_BALANCE"` ✓
+- `details.deficit > 0` (999944) ✓
+- `details.requested` and `details.available` present ✓
+- Hint literal `"Reduza a quantidade para no máximo 55 ou registre uma entrada antes."` — matches the spec wording, and the `55` is **dynamic** (it was the current product stock at the moment of the request, NOT a hardcoded number). **MOVE-04 verified.**
+
+### MOVE-05 — PRODUCT_DELETED (soft-deleted product cannot accept movements)
+
+**Setup:** create a product, soft-delete it, attempt to register a movement.
+
+```bash
+DEL_PRODUCT_ID=$(curl -fsS -X POST http://localhost:8080/api/products -H "Content-Type: application/json" \
+  -d '{"code":"P3-DEL-001","description":"Will be soft-deleted","type":"Electronic","supplierValue":1,"initialStockQuantity":10}' | jq -r '.id')
+curl -fsS -X DELETE "http://localhost:8080/api/products/$DEL_PRODUCT_ID"   # → 204
+curl -s -w "\n%{http_code}" -X POST http://localhost:8080/api/stock-movements \
+  -H "Content-Type: application/json" -H "Idempotency-Key: $(uuidgen)" \
+  -d "{\"productId\":\"$DEL_PRODUCT_ID\",\"type\":\"Inbound\",\"quantity\":1,\"supplierValue\":1}"
+```
+
+**HTTP status:** `422`
+**Response body:**
+
+```json
+{
+  "errorCode": "PRODUCT_DELETED",
+  "category": "BUSINESS_RULE",
+  "message": "Produto 'P3-DEL-001' foi excluído e não aceita novas movimentações",
+  "hint": "Produto 'P3-DEL-001' foi excluído. Movimentos não podem ser registrados para produtos excluídos.",
+  "statusCode": 422,
+  "retryable": false,
+  "details": {
+    "productId": "18557e6a-ee57-4408-8e5b-a86d550ea1a1",
+    "productCode": "P3-DEL-001"
+  },
+  "traceId": "0HNLJG2QH4IQB:00000001",
+  "timestamp": "2026-05-16T19:26:41.1466194Z"
+}
+```
+
+`errorCode == "PRODUCT_DELETED"`, hint contains `"Movimentos não podem ser registrados"`, `details` carries the product identity. **MOVE-05 verified.**
+
+### MOVE-07 — INVALID_MOVEMENT_VALUES (value-field inversion: Inbound carrying saleValue)
+
+**Request (Inbound with `saleValue` instead of `supplierValue`):**
+
+```bash
+curl -s -w "\n%{http_code}" -X POST http://localhost:8080/api/stock-movements \
+  -H "Content-Type: application/json" -H "Idempotency-Key: $(uuidgen)" \
+  -d '{"productId":"7168c579-...","type":"Inbound","quantity":1,"saleValue":10.00}'
+```
+
+**HTTP status:** `422`
+**Response body:**
+
+```json
+{
+  "errorCode": "INVALID_MOVEMENT_VALUES",
+  "category": "BUSINESS_RULE",
+  "message": "Movimento do tipo 'Inbound' não aceita o campo 'saleValue'",
+  "hint": "Movimentos do tipo 'Inbound' requerem o campo 'supplierValue', e não 'saleValue'.",
+  "statusCode": 422,
+  "retryable": false,
+  "details": {
+    "type": "Inbound",
+    "providedField": "saleValue",
+    "expectedField": "supplierValue"
+  },
+  "traceId": "0HNLJG2QH4IQC:00000001",
+  "timestamp": "2026-05-16T19:26:41.1849556Z"
+}
+```
+
+`errorCode == "INVALID_MOVEMENT_VALUES"`. Hint mentions `supplierValue` (the expected field). `details.expectedField == "supplierValue"`, `details.providedField == "saleValue"`. **MOVE-07 verified.**
+
+### MOVEMENT_NOT_FOUND (MOVE-10 negative path)
+
+**Request:**
+
+```bash
+curl -s -w "\n%{http_code}" "http://localhost:8080/api/stock-movements/$(uuidgen)"
+```
+
+**HTTP status:** `404`
+**Response body:**
+
+```json
+{
+  "errorCode": "MOVEMENT_NOT_FOUND",
+  "category": "NOT_FOUND",
+  "message": "Movimento não encontrado",
+  "hint": "Movimento não encontrado. Atualize a página e tente novamente.",
+  "statusCode": 404,
+  "retryable": false,
+  "details": {
+    "movementId": "3d8ad32b-9a45-4624-ad2c-c401b826dab5"
+  },
+  "traceId": "0HNLJG2QH4IQD:00000001",
+  "timestamp": "2026-05-16T19:26:41.2168778Z"
+}
+```
+
+`errorCode == "MOVEMENT_NOT_FOUND"`. Category `NOT_FOUND` (HTTP 404 via category auto-mapping per Plan 03-01 SUMMARY). **MOVE-10 negative path verified.**
+
+---
+
+(Tasks 3-4 append sections here for Swagger + zero-N+1 + Frontend Source-Level Contracts + Manual UAT items.)
+
