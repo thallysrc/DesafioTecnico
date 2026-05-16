@@ -4,7 +4,9 @@
 
 <template>
   <section class="max-w-2xl">
-    <h2 class="text-lg font-semibold text-ink mb-2">Movimentação de Estoque</h2>
+    <h2 class="text-lg font-semibold text-ink mb-2">
+      Movimentação de Estoque
+    </h2>
     <p class="text-sm text-muted">
       Em breve — entradas e saídas de estoque chegam na próxima fase.
     </p>

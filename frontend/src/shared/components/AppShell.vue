@@ -32,7 +32,10 @@ const isActive = (basePath: string) => route.path.startsWith(basePath)
         Stock<span class="text-brand-500">Easy</span>
       </h1>
 
-      <nav aria-label="Navegação principal" class="flex flex-col gap-1">
+      <nav
+        aria-label="Navegação principal"
+        class="flex flex-col gap-1"
+      >
         <RouterLink
           v-for="item in navItems"
           :key="item.basePath"
@@ -44,7 +47,11 @@ const isActive = (basePath: string) => route.path.startsWith(basePath)
               : 'text-muted hover:bg-surface hover:text-ink',
           ]"
         >
-          <component :is="item.icon" class="w-5 h-5" aria-hidden="true" />
+          <component
+            :is="item.icon"
+            class="w-5 h-5"
+            aria-hidden="true"
+          />
           <span>{{ item.label }}</span>
         </RouterLink>
       </nav>

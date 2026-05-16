@@ -32,7 +32,10 @@ onBeforeUnmount(() => {
     aria-live="polite"
     class="inline-flex items-center gap-2 px-3 py-1.5 rounded-md bg-surface"
   >
-    <Loader2 class="w-4 h-4 text-muted animate-spin" aria-hidden="true" />
+    <Loader2
+      class="w-4 h-4 text-muted animate-spin"
+      aria-hidden="true"
+    />
     <span class="text-xs text-muted">Verificando API…</span>
   </div>
 
@@ -42,7 +45,10 @@ onBeforeUnmount(() => {
     aria-live="polite"
     class="inline-flex items-center gap-2 px-3 py-1.5 rounded-md bg-success/10"
   >
-    <Check class="w-4 h-4 text-success" aria-hidden="true" />
+    <Check
+      class="w-4 h-4 text-success"
+      aria-hidden="true"
+    />
     <span class="text-xs font-medium text-success">API conectada</span>
   </div>
 
@@ -52,7 +58,10 @@ onBeforeUnmount(() => {
     aria-live="polite"
     class="inline-flex items-center gap-2 px-3 py-1.5 rounded-md bg-danger/10"
   >
-    <XCircle class="w-4 h-4 text-danger" aria-hidden="true" />
+    <XCircle
+      class="w-4 h-4 text-danger"
+      aria-hidden="true"
+    />
     <span class="text-xs font-medium text-danger">API offline</span>
   </div>
 </template>
