@@ -600,3 +600,128 @@ Created
 ```
 Register a new product in the inventory catalog.
 ```
+
+## Frontend SPA Smoke
+
+**Host environment:** No Chromium for headless browser screenshots, so this smoke is lighter than the backend one. We verify:
+
+1. Vite dev server serves the SPA index for `/`, `/products`, `/stock-movements` (history fallback).
+2. The HTML index contains the brand wordmark, Inter preconnect, `<div id="app">`.
+3. The Vite proxy routes a frontend request to the backend: `curl` via the Vite dev server to `/api/products` returns the same shape as the direct backend hit.
+4. The production build (`npm run build`) and type-check (`vue-tsc`) pass inside the running frontend container.
+
+### 1. HTML index served for /, /products, /stock-movements (SPA history fallback)
+
+**GET http://localhost:5173/**
+
+```html
+    <meta name="description" content="StockEasy — gestão de produtos e movimentações de estoque" />
+    <title>StockEasy</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <div id="app"></div>
+```
+
+**GET http://localhost:5173/products**
+
+```html
+    <meta name="description" content="StockEasy — gestão de produtos e movimentações de estoque" />
+    <title>StockEasy</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <div id="app"></div>
+```
+
+**GET http://localhost:5173/stock-movements**
+
+```html
+    <meta name="description" content="StockEasy — gestão de produtos e movimentações de estoque" />
+    <title>StockEasy</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <div id="app"></div>
+```
+
+### 2. Vite proxy → backend (Axios round-trip via :5173)
+
+**GET http://localhost:5173/api/products** (proxied to backend:8080):
+
+```json
+{
+  "itemsCount": 2,
+  "pagination": {
+    "page": 1,
+    "pageSize": 30,
+    "total": 2,
+    "totalPages": 1,
+    "hasNext": false,
+    "hasPrev": false
+  },
+  "hasLinks": "object"
+}
+```
+
+**Direct hit (backend:8080) for comparison:**
+
+```json
+{
+  "itemsCount": 2,
+  "pagination": {
+    "page": 1,
+    "pageSize": 30,
+    "total": 2,
+    "totalPages": 1,
+    "hasNext": false,
+    "hasPrev": false
+  },
+  "hasLinks": "object"
+}
+```
+
+**Literal `"_links"` survives Axios pass-through** — proxy response sample with the underscored `_links` key on the first item:
+
+```json
+{
+  "self": "/api/products/84ef7f36-0c39-41ac-ba29-b113cbb8e764",
+  "delete": "/api/products/84ef7f36-0c39-41ac-ba29-b113cbb8e764"
+}
+```
+
+**Top-level listing `_links` (pagination rels):**
+
+```json
+{
+  "self": "/api/products?pageSize=30&page=1",
+  "first": "/api/products?pageSize=30&page=1",
+  "last": "/api/products?pageSize=30&page=1"
+}
+```
+
+### 3. Production build smoke (inside frontend container)
+
+```
+
+> stockeasy-web@0.0.0 build
+> vue-tsc --noEmit && vite build
+
+vite v5.4.21 building for production...
+transforming...
+✓ 1689 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                               0.89 kB │ gzip:  0.50 kB
+dist/assets/index-B0ESSqxC.css               17.54 kB │ gzip:  4.11 kB
+dist/assets/StockMovementsPage-BxzgQFMj.js    0.40 kB │ gzip:  0.32 kB
+dist/assets/ProductsPage-1PlPfq3o.js        110.67 kB │ gzip: 31.33 kB
+dist/assets/index-apzJXUgL.js               153.97 kB │ gzip: 59.44 kB
+✓ built in 2.06s
+```
+
+### 4. Type-check inside frontend container
+
+```
+
+> stockeasy-web@0.0.0 type-check
+> vue-tsc --noEmit
+
+```
