@@ -17,6 +17,20 @@ export const productTypeLabel: Record<ProductTypeLiteral, string> = {
   Furniture: 'Móvel',
 }
 
-// Phase 3 will append movementTypeLabel here:
-//   Inbound → 'Entrada'
-//   Outbound → 'Saída'
+/**
+ * Closed catalog of movement directions (mirrors backend MovementType enum).
+ * Same anchor-here pattern as ProductTypeLiteral — `features/stock/types.ts`
+ * re-exports `MovementType` from here so the literal lives in exactly one place.
+ */
+export type MovementTypeLiteral = 'Inbound' | 'Outbound'
+
+/**
+ * Canonical API enum (English) → user-facing PT-BR label mapping for MovementType.
+ * Locked by 03-UI-SPEC §"Enum translations": Inbound → Entrada, Outbound → Saída.
+ *
+ * NEVER inline `t === 'Inbound' ? 'Entrada' : 'Saída'` in components. Always import.
+ */
+export const movementTypeLabel: Record<MovementTypeLiteral, string> = {
+  Inbound: 'Entrada',
+  Outbound: 'Saída',
+}
