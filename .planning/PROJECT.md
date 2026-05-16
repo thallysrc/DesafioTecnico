@@ -18,6 +18,16 @@ Demonstrar competência fullstack através de uma implementação **limpa, testa
 
 <!-- Shipped and confirmed valuable. -->
 
+**Validated in Phase 2: Products Vertical Slice (2026-05-16)** — first end-to-end capability + project conventions locked:
+- **Products CRUD** end-to-end via UI: cadastro (drawer), listagem paginada com 4 estados, detalhamento (drawer), soft-delete via modal de confirmação (CONF-02); toggle "Mostrar excluídos" + badge de excluído
+- **Exception flow** funcional: `DomainException` base + tipadas (`DuplicateCodeException`, `ProductNotFoundException`, etc.); `ExceptionHandlingMiddleware` mapeia para `ErrorResponse` canônico (9 campos) com `errorCode` do catálogo, `hint` dinâmica, `traceId`
+- **FluentValidation** com validators dedicados em PT-BR; mensagens espelhadas byte-a-byte com Zod no frontend
+- **Agentic OpenAPI**: 4 operationIds estáveis (`createProduct`, `listProducts`, `getProduct`, `deleteProduct`), `ProducesResponseType` exaustivo, XML docs em DTOs, `JsonStringEnumConverter` global, envelope de paginação `{ items, pagination, _links }`
+- **UX foundation**: 15 primitives `Base*` (Button/Input/Select/SearchableSelect/Toggle/Table/Pagination/Drawer/Modal/Toast/Badge/Skeleton/EmptyState/ErrorState), composables (`useToast`/`useConfirm`/`usePagination`), `format.ts` + `labels.ts` (BR locale via Intl), Vee-Validate + Zod com `validateOnBlur`, foco a11y (`focus:ring-2`), Nielsen #1-#10 aplicados
+- **`BaseSearchableSelect`** authored (Phase 3 reusa para searchable product picker)
+- **Validation E2E**: catálogo de errorCodes ativo (`VALIDATION_ERROR`, `PRODUCT_NOT_FOUND`, `DUPLICATE_CODE`, `INTERNAL_ERROR`); hints construídas no constructor das exceptions tipadas
+- 3 itens de UAT manual pendentes em `.planning/phases/02-products-vertical-slice/02-HUMAN-UAT.md` (drawer-create flow, soft-delete modal autofocus, network-error toast)
+
 **Validated in Phase 1: Foundation (2026-05-16)** — scaffolding only, no business capability yet:
 - Stack & arquitetura wired: .NET 8 + Dapper + PostgreSQL 16 (single-project N-tier `Inventory/` + `Inventory.Tests/`), Vue 3 + Vite + TS strict + Tailwind (feature-based `src/features/{products,stock}/`)
 - Cross-cutting plumbing live but inactive: `ExceptionHandlingMiddleware` shell, FluentValidation pipeline registered, Swagger + `JsonStringEnumConverter`, CORS named policy `"Frontend"`, Axios `baseURL: '/api'` + Vite proxy → `http://backend:8080`
@@ -244,4 +254,4 @@ This document evolves at phase transitions and milestone boundaries.
 - Tools: leituras (listar produtos, ver histórico, saldo), cadastro de produto, entrada de estoque, saída de estoque (com confirmação)
 
 ---
-*Last updated: 2026-05-16 — Phase 1 (Foundation) complete; scaffolding validated end-to-end via docker-compose smoke*
+*Last updated: 2026-05-16 — Phase 2 (Products Vertical Slice) complete; Products CRUD end-to-end + cross-cutting conventions locked for Phase 3 reuse*
