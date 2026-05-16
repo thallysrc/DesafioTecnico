@@ -60,7 +60,14 @@ Plans:
   3. User can soft-delete a product through a confirmation modal that explains the histórico will be preserved; deleted product is filtered from default listing but still retrievable via `GET /api/products/{id}` with `deletedAt` populated
   4. Every API response — success or error — follows the canonical agentic envelope: paginated lists return `{ items, pagination, _links }`; errors return `ErrorResponse` with `errorCode` from the fixed catalog, dynamic `hint` constructed from real context, `traceId`, and `details`; the frontend toast consumes `apiError.hint ?? apiError.message`
   5. Hitting `/swagger` displays rich OpenAPI docs: every endpoint has stable `operationId` (`createProduct`, `listProducts`, `getProduct`, `deleteProduct`), every DTO field has a description, every status code is declared via `[ProducesResponseType]`, enums serialize as strings (`"Electronic"` not `0`)
-**Plans**: TBD
+**Plans**: 6 plans
+Plans:
+- [ ] 02-01-PLAN.md — Backend domain: Product entity, ProductType enum, Dapper repository, DTOs, FluentValidation (BACK-05/06/11/15/16, PROD-07, AGENT-04/10)
+- [ ] 02-02-PLAN.md — Backend cross-cutting: DomainException hierarchy + typed product exceptions + ExceptionHandlingMiddleware mapping (BACK-12/13/14, AGENT-01/06/07/08/11)
+- [ ] 02-03-PLAN.md — Frontend primitives: 15 BaseX SFCs + 3 composables + format/labels/types + extended Axios interceptor (FRONT-05/06/07/08/09/10/11, UX-01..13 except UX-08)
+- [ ] 02-04-PLAN.md — Backend wire-up: ProductService + ProductsController + DI registration (BACK-07/08/09/10, PROD-01..06, AGENT-02/03/05/09)
+- [ ] 02-05-PLAN.md — Frontend Products feature: types/api/schema/composable + 4 components + ProductsPage rewrite (CONF-02/03 + locked PT-BR mirror)
+- [ ] 02-06-PLAN.md — End-to-end smoke: docker compose stack + curl matrix + Swagger contract + frontend SPA + README touchup
 **UI hint**: yes
 
 ### Phase 3: Stock Movements Vertical Slice
