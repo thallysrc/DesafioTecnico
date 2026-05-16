@@ -18,6 +18,17 @@ Demonstrar competência fullstack através de uma implementação **limpa, testa
 
 <!-- Shipped and confirmed valuable. -->
 
+**Validated in Phase 3: Stock Movements Vertical Slice (2026-05-16)** — second end-to-end capability shipped; vertical slice for movimentações de estoque está vivo end-to-end:
+- **Entradas (Inbound) e saídas (Outbound)** registradas via UI com idempotência obrigatória (`Idempotency-Key` UUID v4 auto-injected pelo Axios interceptor, FRONT-12)
+- **CONF-01 modal** verbatim na saída — 5 definition rows, Cancelar com autofocus, Confirmar brand-primary (NÃO destrutivo)
+- **`StockMovementService` transacional** com `SELECT ... FOR UPDATE` + idempotency fast-path + race-window recovery via 23505 catch
+- **Saldo insuficiente** bloqueado backend-first com `INSUFFICIENT_BALANCE` + `details.available` (frontend só pre-checa via D-08, autoridade está no backend)
+- **Histórico imutável** (MOVE-11): PUT/DELETE retornam 405; tabela frontend usa raw `<table>` (BaseTable força clickable rows e violaria a imutabilidade)
+- **Zero N+1 verificado** via `log_statement='all'` do Postgres: exatamente 2 SQL statements por página de histórico (JOIN'd SELECT + COUNT)
+- **5 typed exceptions** (`MissingIdempotencyKeyException`, `InsufficientBalanceException`, `ProductDeletedException`, `InvalidMovementValuesException`, `MovementNotFoundException`) auto-mapeadas via existing `DomainException.Category` switch (sem touchpoint por tipo no middleware)
+- **Tab strip composition** com WAI-ARIA tabs pattern completo (roving tabindex, ArrowLeft/Right/Up/Down + Home/End + Enter/Space, automatic activation, focus follows tab swap) + URL `?tab=` source-of-truth + `v-if` panels
+- **6 itens de UAT manual pendentes** em `.planning/phases/03-stock-movements-vertical-slice/03-HUMAN-UAT.md` (CONF-01 visual flow, Esc dismiss, INSUFFICIENT_BALANCE inside modal, default tab routing, tab strip keyboard nav, network failure retry) — user approved phase completion 2026-05-16; UAT a ser executado em browser real antes do PR final
+
 **Validated in Phase 2: Products Vertical Slice (2026-05-16)** — first end-to-end capability + project conventions locked:
 - **Products CRUD** end-to-end via UI: cadastro (drawer), listagem paginada com 4 estados, detalhamento (drawer), soft-delete via modal de confirmação (CONF-02); toggle "Mostrar excluídos" + badge de excluído
 - **Exception flow** funcional: `DomainException` base + tipadas (`DuplicateCodeException`, `ProductNotFoundException`, etc.); `ExceptionHandlingMiddleware` mapeia para `ErrorResponse` canônico (9 campos) com `errorCode` do catálogo, `hint` dinâmica, `traceId`
@@ -46,13 +57,13 @@ Demonstrar competência fullstack através de uma implementação **limpa, testa
 - [ ] Soft delete de produto (`DELETE /api/products/{id}` marca `deleted_at`)
 - [ ] Listagem filtra deletados por padrão; `?includeDeleted=true` retorna todos
 
-**Domínio — Movimentação de Estoque:**
-- [ ] Registrar entrada (`Inbound`) — aumenta saldo, atualiza supplier_value
-- [ ] Registrar saída (`Outbound`) — valida saldo suficiente, registra sale_value
-- [ ] Listar histórico paginado com filtros (productId, startDate, endDate)
-- [ ] Idempotency-Key **required** em POST de movimentos
-- [ ] Movimentos com produto soft-deleted são rejeitados (`PRODUCT_DELETED`)
-- [ ] Histórico de produto deletado permanece acessível
+**Domínio — Movimentação de Estoque:** ✓ validated in Phase 3
+- [x] Registrar entrada (`Inbound`) — aumenta saldo, atualiza supplier_value
+- [x] Registrar saída (`Outbound`) — valida saldo suficiente, registra sale_value
+- [x] Listar histórico paginado com filtros (productId, startDate, endDate)
+- [x] Idempotency-Key **required** em POST de movimentos
+- [x] Movimentos com produto soft-deleted são rejeitados (`PRODUCT_DELETED`)
+- [x] Histórico de produto deletado permanece acessível
 
 **Backend — Arquitetura & qualidade:**
 - [ ] Arquitetura single-project N-tier (estilo BancoShu): `Inventory/` + `Inventory.Tests/`
@@ -254,4 +265,4 @@ This document evolves at phase transitions and milestone boundaries.
 - Tools: leituras (listar produtos, ver histórico, saldo), cadastro de produto, entrada de estoque, saída de estoque (com confirmação)
 
 ---
-*Last updated: 2026-05-16 — Phase 2 (Products Vertical Slice) complete; Products CRUD end-to-end + cross-cutting conventions locked for Phase 3 reuse*
+*Last updated: 2026-05-16 — Phase 3 (Stock Movements Vertical Slice) complete; Inbound/Outbound + idempotency + CONF-01 modal + zero-N+1 history wired end-to-end. 6 manual UAT items pending in browser. Ready for Phase 4 (Tests, Docs & Polish).*
