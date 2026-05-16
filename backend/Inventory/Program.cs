@@ -78,11 +78,13 @@ builder.Services.AddSingleton<IDbConnectionFactory, DbConnectionFactory>();
 // Repositories — Scoped (interface + impl per BACK-08).
 // -------------------------------------------------------------------------------------------------
 builder.Services.AddScoped<Inventory.Api.Repositories.IProductRepository, Inventory.Api.Repositories.ProductRepository>();
+builder.Services.AddScoped<Inventory.Api.Repositories.IStockMovementRepository, Inventory.Api.Repositories.StockMovementRepository>();
 
 // -------------------------------------------------------------------------------------------------
 // Services — Scoped (concrete classes, no interface per BACK-08).
 // -------------------------------------------------------------------------------------------------
 builder.Services.AddScoped<Inventory.Api.Services.ProductService>();
+builder.Services.AddScoped<Inventory.Api.Services.StockMovementService>();
 
 var app = builder.Build();
 
