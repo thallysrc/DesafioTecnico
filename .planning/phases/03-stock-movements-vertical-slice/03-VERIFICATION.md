@@ -424,5 +424,131 @@ curl -s -w "\n%{http_code}" "http://localhost:8080/api/stock-movements/$(uuidgen
 
 ---
 
-(Tasks 3-4 append sections here for Swagger + zero-N+1 + Frontend Source-Level Contracts + Manual UAT items.)
+### MOVE-09 — Zero-N+1 query-count evidence (history pagination emits exactly 2 SQL statements)
+
+**Method used:** statement logging (fallback method (b) per the plan's `<query-count-strategy>` block). `pg_stat_statements` was created but **could not be loaded** — Postgres 16-alpine requires the library to be listed in `shared_preload_libraries`, which is a config-time setting (`postgresql.conf`) not modifiable via `ALTER SYSTEM` without restarting the cluster. Falling back to `log_statement = 'all'` produced clean, parseable evidence.
+
+**Setup:**
+
+```bash
+docker compose exec -T postgres psql -U stockeasy -d stockeasy -c "ALTER SYSTEM SET log_statement = 'all';"
+docker compose exec -T postgres psql -U stockeasy -d stockeasy -c "SELECT pg_reload_conf();"
+```
+
+**Probe:**
+
+```bash
+# Snapshot postgres logs before the request
+docker compose logs --no-color postgres > /tmp/03-05/pg-log-before.txt
+
+# Hit the endpoint with the largest pageSize (100 — covers the most potential N+1 surface)
+curl -fsS "http://localhost:8080/api/stock-movements?pageSize=100" > /tmp/03-05/list-page1.json
+
+# Snapshot logs after the request and slice the diff
+docker compose logs --no-color postgres > /tmp/03-05/pg-log-after.txt
+NEW_LINES=$(( $(wc -l < /tmp/03-05/pg-log-after.txt) - $(wc -l < /tmp/03-05/pg-log-before.txt) ))
+tail -n "$NEW_LINES" /tmp/03-05/pg-log-after.txt > /tmp/03-05/pg-log-slice.txt
+
+# Count distinct prepared-statement executions that touch stock_movements
+grep -c "LOG:  statement:" /tmp/03-05/pg-log-slice.txt          # → reset markers (DISCARD ALL × 2)
+grep -E "stock_movements" /tmp/03-05/pg-log-slice.txt | grep -v "pg_stat" | wc -l   # → 2 FROM-clause matches (one per statement)
+```
+
+**Raw log slice (the only `stock_movements`-touching statements observed for one history page of pageSize=100):**
+
+```
+2026-05-16 19:28:10.580 UTC [78] LOG:  execute <unnamed>:
+            SELECT
+        m.id              as Id,
+        m.product_id      as ProductId,
+        m.type            as Type,
+        m.quantity        as Quantity,
+        m.sale_value      as SaleValue,
+        m.supplier_value  as SupplierValue,
+        m.idempotency_key as IdempotencyKey,
+        m.occurred_at     as OccurredAt,
+        m.created_at      as CreatedAt,
+        p.code            as ProductCode,
+        p.description     as ProductDescription
+        FROM stock_movements m
+        INNER JOIN products p ON p.id = m.product_id
+            WHERE ($1::uuid IS NULL OR m.product_id = $1)
+              AND ($2::timestamptz IS NULL OR m.occurred_at >= $2)
+              AND ($3::timestamptz IS NULL OR m.occurred_at <= $3)
+            ORDER BY m.occurred_at DESC, m.id DESC
+            LIMIT $4 OFFSET $5
+2026-05-16 19:28:10.580 UTC [78] DETAIL:  parameters: $1 = NULL, $2 = NULL, $3 = NULL, $4 = '100', $5 = '0'
+
+2026-05-16 19:28:10.581 UTC [78] LOG:  execute <unnamed>:
+            SELECT COUNT(*)
+        FROM stock_movements m
+        INNER JOIN products p ON p.id = m.product_id
+            WHERE ($1::uuid IS NULL OR m.product_id = $1)
+              AND ($2::timestamptz IS NULL OR m.occurred_at >= $2)
+              AND ($3::timestamptz IS NULL OR m.occurred_at <= $3)
+2026-05-16 19:28:10.581 UTC [78] DETAIL:  parameters: $1 = NULL, $2 = NULL, $3 = NULL
+```
+
+**Statement count:** **exactly 2** `execute <unnamed>` blocks against `stock_movements`. One JOIN'd SELECT (paged) and one COUNT (same WHERE, no ORDER/LIMIT). No per-row product fetch, no fan-out — even though the response payload carries `productCode` + `productDescription` for every item, those fields come from the JOIN, not a follow-up query.
+
+`grep -E "stock_movements" pg-log-slice.txt | grep -v pg_stat | wc -l` → **2** (two `FROM stock_movements m` matches, one per statement).
+
+**MOVE-09 verified at the database plane.** Per Plan 03-01 SUMMARY, the SQL shape is exactly what the repository emits (`SelectColumns` + `FromJoin` constants reused between `ListAsync` items and count paths). Same shape will hold for pageSize=20, pageSize=50, or any pageSize ≤ 100 — the query plan is parameter-driven.
+
+**Cleanup:** `log_statement = 'all'` is left enabled for the rest of the smoke (it does not affect correctness; Postgres just keeps logging). The compose teardown at the end of the plan (`docker compose down -v`) wipes the volume entirely.
+
+### Swagger Contract — Phase 3 added + Phase 2 preserved
+
+**Probe:** `curl -fsS http://localhost:8080/swagger/v1/swagger.json > /tmp/03-05/swagger.json` (28,566 bytes).
+
+| operationId | Expected count | Got |
+|-------------|-----:|-----:|
+| `createStockMovement` (Phase 3) | 1 | **1** |
+| `listStockMovements` (Phase 3) | 1 | **1** |
+| `getStockMovement` (Phase 3) | 1 | **1** |
+| `createProduct` (Phase 2 regression) | 1 | **1** |
+| `listProducts` (Phase 2 regression) | 1 | **1** |
+| `getProduct` (Phase 2 regression) | 1 | **1** |
+| `deleteProduct` (Phase 2 regression) | 1 | **1** |
+
+Probe command (handles both `"operationId":"…"` and `"operationId": "…"` spacings):
+
+```bash
+for op in createStockMovement listStockMovements getStockMovement createProduct listProducts getProduct deleteProduct; do
+  COUNT=$(grep -Ec "\"operationId\":\\s*\"$op\"" /tmp/03-05/swagger.json)
+  printf "%-30s = %d\n" "$op" "$COUNT"
+done
+```
+
+**Schemas exposed (Phase 3 additions):**
+
+```bash
+$ jq -e '.components.schemas.MovementResponse'        /tmp/03-05/swagger.json > /dev/null && echo OK   # MovementResponse OK
+$ jq -e '.components.schemas.CreateMovementRequest'   /tmp/03-05/swagger.json > /dev/null && echo OK   # CreateMovementRequest OK
+$ jq -e '.components.schemas.PagedMovementsResponse'  /tmp/03-05/swagger.json > /dev/null && echo OK   # PagedMovementsResponse OK
+```
+
+**Idempotency-Key declared as header parameter on the POST operation:**
+
+```bash
+$ jq -e '.paths."/api/stock-movements".post.parameters[]? | select(.name=="Idempotency-Key")' /tmp/03-05/swagger.json > /dev/null && echo OK
+```
+
+→ OK (parameter is present and `in: header`).
+
+**MovementType enum is serialized as strings (not integers):**
+
+```bash
+$ jq -e '.components.schemas.MovementType.enum | index("Inbound")'  /tmp/03-05/swagger.json > /dev/null && echo OK   # Inbound enum OK
+$ jq -e '.components.schemas.MovementType.enum | index("Outbound")' /tmp/03-05/swagger.json > /dev/null && echo OK   # Outbound enum OK
+```
+
+Both literal strings present in the enum (LLM/human-friendly per D23).
+
+**Swagger contract intact AND extended.** No Phase 2 operationIds disappeared; all three Phase 3 ids are present with stable camelCase verb-noun naming.
+
+---
+
+(Task 4 appends Frontend Source-Level Contracts + Manual UAT items below.)
+
 
