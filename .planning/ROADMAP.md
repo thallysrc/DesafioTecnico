@@ -26,7 +26,7 @@ The API is **agentic-friendly from day one** (operationIds, structured errorCode
 - Phase 4 sub-tracks (tests vs docs) are fully independent and can run in parallel
 
 - [ ] **Phase 1: Foundation** - Scaffold both apps, docker-compose up runs PG + API + Vue end-to-end with "hello world"
-- [ ] **Phase 2: Products Vertical Slice** - End-to-end Products CRUD with agentic API conventions and UX foundation established
+- [x] **Phase 2: Products Vertical Slice** - End-to-end Products CRUD with agentic API conventions and UX foundation established (completed 2026-05-16)
 - [ ] **Phase 3: Stock Movements Vertical Slice** - End-to-end Inbound/Outbound with idempotency, saldo validation, and confirmation modal
 - [ ] **Phase 4: Tests, Docs & Polish** - xUnit + Vitest test suites + 3 branded PDF docs committed in docs/dist/
 
@@ -67,7 +67,7 @@ Plans:
 - [x] 02-03-PLAN.md — Frontend primitives: 15 BaseX SFCs + 3 composables + format/labels/types + extended Axios interceptor (FRONT-05/06/07/08/09/10/11, UX-01..13 except UX-08)
 - [x] 02-04-PLAN.md — Backend wire-up: ProductService + ProductsController + DI registration (BACK-07/08/09/10, PROD-01..06, AGENT-02/03/05/09)
 - [x] 02-05-PLAN.md — Frontend Products feature: types/api/schema/composable + 4 components + ProductsPage rewrite (CONF-02/03 + locked PT-BR mirror)
-- [ ] 02-06-PLAN.md — End-to-end smoke: docker compose stack + curl matrix + Swagger contract + frontend SPA + README touchup
+- [x] 02-06-PLAN.md — End-to-end smoke: docker compose stack + curl matrix + Swagger contract + frontend SPA + README touchup
 **UI hint**: yes
 
 ### Phase 3: Stock Movements Vertical Slice
@@ -107,7 +107,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Foundation | 0/TBD | Not started | - |
-| 2. Products Vertical Slice | 5/6 | In Progress|  |
+| 2. Products Vertical Slice | 6/6 | Complete   | 2026-05-16 |
 | 3. Stock Movements Vertical Slice | 0/TBD | Not started | - |
 | 4. Tests, Docs & Polish | 0/TBD | Not started | - |
 
