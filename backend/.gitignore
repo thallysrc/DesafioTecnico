@@ -1,0 +1,13 @@
+# .NET build output
+**/bin/
+**/obj/
+
+# IDE
+*.user
+*.suo
+.vs/
+.idea/
+
+# Generated XML doc files (build output)
+*.xml
+!**/Properties/**/*.xml
