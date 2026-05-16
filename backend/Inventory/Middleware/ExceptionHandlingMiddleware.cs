@@ -15,6 +15,7 @@ namespace Inventory.Api.Middleware;
 ///   <item><description><see cref="ValidationException"/> → 400 <c>VALIDATION_ERROR</c> with <c>details.fields[]</c></description></item>
 ///   <item><description><see cref="DomainException"/> → status from <see cref="DomainException.Category"/> (404 NOT_FOUND / 422 BUSINESS_RULE / 400 VALIDATION / 500 fallback)</description></item>
 ///   <item><description>Any other <see cref="Exception"/> → 500 <c>INTERNAL_ERROR</c></description></item>
+///   <item><description>Phase 3 additions (<see cref="Inventory.Api.Exceptions.MissingIdempotencyKeyException"/>, <see cref="Inventory.Api.Exceptions.InsufficientBalanceException"/>, <see cref="Inventory.Api.Exceptions.ProductDeletedException"/>, <see cref="Inventory.Api.Exceptions.InvalidMovementValuesException"/>, <see cref="Inventory.Api.Exceptions.MovementNotFoundException"/>) all flow through the <see cref="DomainException"/> arm and inherit their HTTP status from <see cref="DomainException.Category"/> — no per-type case required.</description></item>
 /// </list>
 /// </summary>
 public class ExceptionHandlingMiddleware
