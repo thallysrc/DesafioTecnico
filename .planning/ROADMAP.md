@@ -99,7 +99,14 @@ Plans:
   3. `docs/` contains `README.md` index plus three markdown sources (`01-product-decisions.md` with strategic decisions + v2 roadmap, `02-architecture.md` with 5 Mermaid diagrams + stack table + run instructions, `03-business-rules.md` with entities, enums, regras enforced, and full errorCode catalog table)
   4. Running `docs/generate-pdfs.sh` (Pandoc + WeasyPrint + mermaid-filter) regenerates the three PDFs in `docs/dist/` with branded CSS (StockEasy palette, Inter font, capa, header/footer, pagination); the three PDFs are committed to the repo
   5. Root `README.md` explains how to run with `docker-compose up`, lists Swagger and frontend URLs, and links to `docs/dist/` so the evaluator can read the documentation without installing toolchains
-**Plans**: TBD
+**Plans**: 6 plans
+Plans:
+- [ ] 04-01-PLAN.md — Backend xUnit + Moq: ProductService + StockMovementService + CreateMovementRequestValidator tests with AssertDomain.Trio helper (TEST-01..04)
+- [ ] 04-02-PLAN.md — Frontend Vitest infra (devDeps + config + setup) + useProducts + useStockMovements composable tests (TEST-05)
+- [ ] 04-03-PLAN.md — Frontend Vitest component tests: ProductForm + OutboundForm shallow-mount with stubbed Base* primitives (TEST-06)
+- [ ] 04-04-PLAN.md — docs/ markdown sources (3 docs + 5 Mermaid diagrams + errorCode catalog) + assets (pdf-style.css + pandoc-template.html) + docs/README.md (DOC-01..06)
+- [ ] 04-05-PLAN.md — docs/generate-pdfs.sh pipeline (Pandoc + WeasyPrint + mermaid-filter) + 3 committed PDFs in docs/dist/ (DOC-07, DOC-08)
+- [ ] 04-06-PLAN.md — Root README polish + TEST-07 final integration smoke (dotnet test + npm test) (TEST-07, DOC-09)
 
 ## Progress
 
@@ -115,7 +122,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4
 | 1. Foundation | 0/TBD | Not started | - |
 | 2. Products Vertical Slice | 6/6 | Complete    | 2026-05-16 |
 | 3. Stock Movements Vertical Slice | 0/TBD | Not started | - |
-| 4. Tests, Docs & Polish | 0/TBD | Not started | - |
+| 4. Tests, Docs & Polish | 0/6 | Planned | - |
 
 ---
 
