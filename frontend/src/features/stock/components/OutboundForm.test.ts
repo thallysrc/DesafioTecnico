@@ -31,7 +31,7 @@ vi.mock('@/features/stock/api')
 
 function makeProduct(overrides: Partial<ProductResponse> = {}): ProductResponse {
   return {
-    id: 'p1',
+    id: '11111111-1111-4111-8111-111111111111',
     code: 'P001',
     description: 'Notebook',
     type: 'Electronic',
@@ -48,7 +48,7 @@ function makeProduct(overrides: Partial<ProductResponse> = {}): ProductResponse 
 function makeMovement(overrides: Partial<MovementResponse> = {}): MovementResponse {
   return {
     id: 'm1',
-    productId: 'p1',
+    productId: '11111111-1111-4111-8111-111111111111',
     productCode: 'P001',
     productDescription: 'Notebook',
     type: 'Outbound',
@@ -114,7 +114,7 @@ describe('OutboundForm', () => {
   it('mounts and loads active products into the dropdown on mount', async () => {
     vi.mocked(productsApi.list).mockResolvedValueOnce(
       makePagedProducts([
-        makeProduct({ id: 'p1', code: 'P001', description: 'Notebook' }),
+        makeProduct({ id: '11111111-1111-4111-8111-111111111111', code: 'P001', description: 'Notebook' }),
         makeProduct({ id: 'p2', code: 'P002', description: 'Mouse' }),
       ]),
     )
@@ -127,19 +127,19 @@ describe('OutboundForm', () => {
     const select = wrapper.findComponent({ name: 'BaseSearchableSelect' })
     const options = select.props('options') as Array<{ value: string; label: string }>
     expect(options).toHaveLength(2)
-    expect(options[0]).toEqual({ value: 'p1', label: 'P001 — Notebook' })
+    expect(options[0]).toEqual({ value: '11111111-1111-4111-8111-111111111111', label: 'P001 — Notebook' })
     expect(options[1]).toEqual({ value: 'p2', label: 'P002 — Mouse' })
   })
 
   it('renders Disponível helper with formatted quantity when a product is selected with stock > 0', async () => {
     vi.mocked(productsApi.list).mockResolvedValueOnce(
-      makePagedProducts([makeProduct({ id: 'p1', stockQuantity: 8 })]),
+      makePagedProducts([makeProduct({ id: '11111111-1111-4111-8111-111111111111', stockQuantity: 8 })]),
     )
 
     const wrapper = makeWrapper()
     await flushPromises()
 
-    wrapper.findComponent({ name: 'BaseSearchableSelect' }).vm.$emit('update:modelValue', 'p1')
+    wrapper.findComponent({ name: 'BaseSearchableSelect' }).vm.$emit('update:modelValue', '11111111-1111-4111-8111-111111111111')
     await flushPromises()
 
     const html = wrapper.html()
@@ -151,13 +151,13 @@ describe('OutboundForm', () => {
 
   it('surfaces the D-08 pre-check error when quantity > selectedProduct.stockQuantity', async () => {
     vi.mocked(productsApi.list).mockResolvedValueOnce(
-      makePagedProducts([makeProduct({ id: 'p1', stockQuantity: 3 })]),
+      makePagedProducts([makeProduct({ id: '11111111-1111-4111-8111-111111111111', stockQuantity: 3 })]),
     )
 
     const wrapper = makeWrapper()
     await flushPromises()
 
-    wrapper.findComponent({ name: 'BaseSearchableSelect' }).vm.$emit('update:modelValue', 'p1')
+    wrapper.findComponent({ name: 'BaseSearchableSelect' }).vm.$emit('update:modelValue', '11111111-1111-4111-8111-111111111111')
     await flushPromises()
 
     // Order in template: [0]=quantity, [1]=saleValue.
@@ -171,14 +171,14 @@ describe('OutboundForm', () => {
 
   it('opens the CONF-01 modal on submit when pre-check passes — does NOT call register yet', async () => {
     vi.mocked(productsApi.list).mockResolvedValueOnce(
-      makePagedProducts([makeProduct({ id: 'p1', stockQuantity: 10 })]),
+      makePagedProducts([makeProduct({ id: '11111111-1111-4111-8111-111111111111', stockQuantity: 10 })]),
     )
 
     const wrapper = makeWrapper()
     await flushPromises()
 
     // Set product + quantity + saleValue to valid values
-    wrapper.findComponent({ name: 'BaseSearchableSelect' }).vm.$emit('update:modelValue', 'p1')
+    wrapper.findComponent({ name: 'BaseSearchableSelect' }).vm.$emit('update:modelValue', '11111111-1111-4111-8111-111111111111')
     await flushPromises()
     const inputs = wrapper.findAllComponents({ name: 'BaseInput' })
     inputs[0].vm.$emit('update:modelValue', 5) // quantity
@@ -186,8 +186,10 @@ describe('OutboundForm', () => {
     inputs[1].vm.$emit('blur') // commits parsed saleValue to form
     await flushPromises()
 
-    // Trigger submit via form element (onSubmit is template-bound, not exposed).
-    await wrapper.find('form').trigger('submit.prevent')
+    // Invoke the exposed onSubmit handler directly. trigger('submit') on the
+    // form does not always dispatch through Vue's @submit.prevent listener in
+    // vue-test-utils v2; calling the exposed handler is the documented seam.
+    await (wrapper.vm as unknown as { onSubmit: () => Promise<unknown> }).onSubmit()
     await flushPromises()
 
     // Modal should be open and register MUST NOT have been called yet.
@@ -198,20 +200,20 @@ describe('OutboundForm', () => {
 
   it('confirming the modal calls movementsApi.register with the normalized Outbound payload', async () => {
     vi.mocked(productsApi.list).mockResolvedValueOnce(
-      makePagedProducts([makeProduct({ id: 'p1', stockQuantity: 10 })]),
+      makePagedProducts([makeProduct({ id: '11111111-1111-4111-8111-111111111111', stockQuantity: 10 })]),
     )
     vi.mocked(movementsApi.register).mockResolvedValueOnce(makeMovement())
     // useStockMovements.register refetches the history page after success.
     vi.mocked(movementsApi.list).mockResolvedValueOnce(makePagedMovements([makeMovement()]))
     // OutboundForm.onConfirm calls productsApi.getById after register success (D-03).
     vi.mocked(productsApi.getById).mockResolvedValueOnce(
-      makeProduct({ id: 'p1', stockQuantity: 5 }),
+      makeProduct({ id: '11111111-1111-4111-8111-111111111111', stockQuantity: 5 }),
     )
 
     const wrapper = makeWrapper()
     await flushPromises()
 
-    wrapper.findComponent({ name: 'BaseSearchableSelect' }).vm.$emit('update:modelValue', 'p1')
+    wrapper.findComponent({ name: 'BaseSearchableSelect' }).vm.$emit('update:modelValue', '11111111-1111-4111-8111-111111111111')
     await flushPromises()
     const inputs = wrapper.findAllComponents({ name: 'BaseInput' })
     inputs[0].vm.$emit('update:modelValue', 5)
@@ -220,7 +222,7 @@ describe('OutboundForm', () => {
     await flushPromises()
 
     // Step 1: submit → opens modal (no register yet).
-    await wrapper.find('form').trigger('submit.prevent')
+    await (wrapper.vm as unknown as { onSubmit: () => Promise<unknown> }).onSubmit()
     await flushPromises()
     expect(movementsApi.register).not.toHaveBeenCalled()
 
@@ -230,7 +232,7 @@ describe('OutboundForm', () => {
 
     expect(movementsApi.register).toHaveBeenCalledTimes(1)
     expect(movementsApi.register).toHaveBeenCalledWith({
-      productId: 'p1',
+      productId: '11111111-1111-4111-8111-111111111111',
       type: 'Outbound',
       quantity: 5,
       saleValue: 100,

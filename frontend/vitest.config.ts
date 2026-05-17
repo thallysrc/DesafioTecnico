@@ -23,9 +23,17 @@ export default defineConfig({
     },
   },
   test: {
+    root: __dirname,
     environment: 'happy-dom',
     globals: true,
     setupFiles: ['./tests/setup.ts'],
     include: ['src/**/*.test.ts', 'tests/**/*.test.ts'],
+    exclude: [
+      '**/node_modules/**',
+      '**/dist/**',
+      // Skip orphan agent worktrees (Phase 1-4 wave executors) that contain
+      // duplicate test files but no installed dependencies.
+      '**/.claude/worktrees/**',
+    ],
   },
 })

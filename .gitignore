@@ -9,6 +9,7 @@
 
 # docs: mermaid-filter intermediate artifacts (do NOT ignore docs/dist/*.pdf — those are committed)
 docs/.mermaid-filter*
+docs/mermaid-filter.err
 docs/dist/*.tmp
 docs/dist/*.html
 

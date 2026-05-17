@@ -151,6 +151,11 @@ const onSubmit = handleSubmit(() => {
   modalOpen.value = true
 })
 
+// Test seam: expose onSubmit so component tests can invoke the same handler
+// the template wires to `@submit.prevent` without relying on vue-test-utils'
+// `trigger('submit')`, which does not always dispatch through Vue's listener.
+defineExpose({ onSubmit })
+
 async function onConfirm(): Promise<void> {
   if (!selectedProduct.value || values.productId == null || values.quantity == null || values.saleValue == null) return
   isSubmitting.value = true
