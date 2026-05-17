@@ -13,6 +13,12 @@ docs/mermaid-filter.err
 docs/dist/*.tmp
 docs/dist/*.html
 
+# Claude Code transient state (agent worktrees + caches)
+.claude/
+
+# Root-level node_modules (created by ad-hoc npx invocations; frontend has its own)
+/node_modules/
+
 # Editor / OS noise
 .DS_Store
 Thumbs.db
