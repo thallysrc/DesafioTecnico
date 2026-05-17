@@ -18,6 +18,14 @@ Demonstrar competência fullstack através de uma implementação **limpa, testa
 
 <!-- Shipped and confirmed valuable. -->
 
+**Validated in Phase 4: Tests, Docs & Polish (2026-05-17)** — milestone hardening + evaluator artifacts shipped:
+- **Backend xUnit + Moq suite** — 42 tests green via `dotnet test`: `ProductService` (12 facts) + `StockMovementService` (15 facts, Groups A+B) + `CreateMovementRequestValidator` (6 facts) + Phase 2 validator (8 facts) + smoke (1). Every typed-exception path asserts the trio (ErrorCode, Message substring, non-null Hint) via `AssertDomain.Trio` helper.
+- **Frontend Vitest suite** — 27 tests green via `npm test`: useProducts + useStockMovements composables (api module-seam mock) + ProductForm + OutboundForm components (shallow mount with Base* stubbed per D-09). Vitest + happy-dom + @vue/test-utils stack added with `vitest.config.ts` mirroring vite alias.
+- **3 branded PDFs** committed in `docs/dist/` (78K + 217K + 88K) — Pandoc + WeasyPrint + mermaid-filter pipeline (`docs/generate-pdfs.sh`). Cover page com wordmark + gradiente brand, Inter font, 5 inline Mermaid SVG diagrams in `02-architecture.pdf`. Evaluator opens straight from repo without installing toolchain.
+- **`docs/` directory** — `README.md` (índice + install instructions) + 3 markdown sources + `assets/pdf-style.css` (CSS Paged Media, brand palette, Inter) + `assets/pandoc-template.html` (cover header) + `generate-pdfs.sh` (canonical pipeline).
+- **Root `README.md`** extended (NOT replaced per D-20) with `## Documentação` (links to all 3 PDFs) + `## Testes` (one-liners + coverage breakdown + Docker/nvm fallback for clean hosts) + preserved Phase 1+3 polish + `README.challenge-spec.md` link.
+- **InboundForm UX polish** (carried in same milestone): `Valor do fornecedor` agora pre-fill com `supplierValue` do produto selecionado, mas continua editável (commit `c083910`). Phase 3 surface improvement applied during Phase 4 review.
+
 **Validated in Phase 3: Stock Movements Vertical Slice (2026-05-16)** — second end-to-end capability shipped; vertical slice for movimentações de estoque está vivo end-to-end:
 - **Entradas (Inbound) e saídas (Outbound)** registradas via UI com idempotência obrigatória (`Idempotency-Key` UUID v4 auto-injected pelo Axios interceptor, FRONT-12)
 - **CONF-01 modal** verbatim na saída — 5 definition rows, Cancelar com autofocus, Confirmar brand-primary (NÃO destrutivo)
@@ -118,19 +126,19 @@ Demonstrar competência fullstack através de uma implementação **limpa, testa
 - [ ] Variáveis de ambiente para connection strings
 - [ ] CORS configurado pro frontend chamar backend
 
-**Testes:**
-- [ ] xUnit + Moq no backend cobrindo Services (regras de negócio), Validators, Repositories críticos
-- [ ] Vitest + Vue Test Utils no frontend cobrindo composables + forms críticos
-- [ ] Cobrir cenários de erro agentic (errorCode + hint + details corretos)
+**Testes:** ✓ validated in Phase 4
+- [x] xUnit + Moq no backend (42 tests verde) — ProductService + StockMovementService + Validators + AssertDomain.Trio helper assertando (ErrorCode, Message substring, non-null Hint) em todo cenário de exception
+- [x] Vitest + happy-dom + @vue/test-utils no frontend (27 tests verde) — useProducts + useStockMovements composables (api module-seam mock) + ProductForm + OutboundForm components (shallow mount com Base* stubbed)
+- [x] Cenários de erro agentic cobertos: DUPLICATE_CODE, INSUFFICIENT_BALANCE, PRODUCT_DELETED, PRODUCT_NOT_FOUND, MISSING_IDEMPOTENCY_KEY, INVALID_MOVEMENT_VALUES, MOVEMENT_NOT_FOUND, idempotency replay path, 23505 race-window recovery
 
-**Documentação:**
-- [ ] `docs/` na raiz com 3 arquivos markdown:
-  - `01-product-decisions.md` — decisões estratégicas, trade-offs, roadmap futuro
-  - `02-architecture.md` — diagramas Mermaid (system context, layered, sequence, ER, feature flow), stack, como rodar
-  - `03-business-rules.md` — entidades, enums, regras enforced, catálogo de errorCodes
-- [ ] Pipeline Pandoc + WeasyPrint + mermaid-filter gera PDFs com CSS branded (paleta StockEasy, Inter, capa, header/footer)
-- [ ] PDFs commitados em `docs/dist/` (avaliador vê direto)
-- [ ] Script `docs/generate-pdfs.sh` regenera localmente (install: pandoc + weasyprint + mermaid-cli + mermaid-filter)
+**Documentação:** ✓ validated in Phase 4
+- [x] `docs/` na raiz com 3 arquivos markdown:
+  - [x] `01-product-decisions.md` — visão, 12 decisões estratégicas (D1-D31), trade-offs, roadmap v2
+  - [x] `02-architecture.md` — 5 diagramas Mermaid (System Context, Backend Layered, Sequence stock-out, ER Diagram, Frontend feature flow), stack table, run instructions
+  - [x] `03-business-rules.md` — entities, enums, regras enforced, catálogo de 9 errorCodes com tabela canônica
+- [x] Pipeline Pandoc + WeasyPrint + mermaid-filter (`docs/generate-pdfs.sh`) gera PDFs com CSS branded (paleta StockEasy `#1863DC`, Inter, capa, running header/footer, pagination)
+- [x] PDFs commitados em `docs/dist/` (78K + 217K + 88K) — avaliador abre direto sem instalar toolchain
+- [x] `docs/README.md` documenta install do toolchain pra regeneração opcional
 
 ### Out of Scope
 
@@ -265,4 +273,4 @@ This document evolves at phase transitions and milestone boundaries.
 - Tools: leituras (listar produtos, ver histórico, saldo), cadastro de produto, entrada de estoque, saída de estoque (com confirmação)
 
 ---
-*Last updated: 2026-05-16 — Phase 3 (Stock Movements Vertical Slice) complete; Inbound/Outbound + idempotency + CONF-01 modal + zero-N+1 history wired end-to-end. 6 manual UAT items pending in browser. Ready for Phase 4 (Tests, Docs & Polish).*
+*Last updated: 2026-05-17 — Milestone v1.0 COMPLETE. All 4 phases shipped: Foundation, Products vertical slice, Stock Movements vertical slice, Tests + Docs + Polish. Backend 42/42 + frontend 27/27 tests green. 3 branded PDFs in `docs/dist/`. Root README polished. Repo ready for PR/review.*

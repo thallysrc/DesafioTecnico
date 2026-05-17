@@ -101,12 +101,12 @@ Plans:
   5. Root `README.md` explains how to run with `docker-compose up`, lists Swagger and frontend URLs, and links to `docs/dist/` so the evaluator can read the documentation without installing toolchains
 **Plans**: 6 plans
 Plans:
-- [ ] 04-01-PLAN.md — Backend xUnit + Moq: ProductService + StockMovementService + CreateMovementRequestValidator tests with AssertDomain.Trio helper (TEST-01..04)
-- [ ] 04-02-PLAN.md — Frontend Vitest infra (devDeps + config + setup) + useProducts + useStockMovements composable tests (TEST-05)
-- [ ] 04-03-PLAN.md — Frontend Vitest component tests: ProductForm + OutboundForm shallow-mount with stubbed Base* primitives (TEST-06)
-- [ ] 04-04-PLAN.md — docs/ markdown sources (3 docs + 5 Mermaid diagrams + errorCode catalog) + assets (pdf-style.css + pandoc-template.html) + docs/README.md (DOC-01..06)
-- [ ] 04-05-PLAN.md — docs/generate-pdfs.sh pipeline (Pandoc + WeasyPrint + mermaid-filter) + 3 committed PDFs in docs/dist/ (DOC-07, DOC-08)
-- [ ] 04-06-PLAN.md — Root README polish + TEST-07 final integration smoke (dotnet test + npm test) (TEST-07, DOC-09)
+- [x] 04-01-PLAN.md — Backend xUnit + Moq: ProductService + StockMovementService + CreateMovementRequestValidator tests with AssertDomain.Trio helper (TEST-01..04)
+- [x] 04-02-PLAN.md — Frontend Vitest infra (devDeps + config + setup) + useProducts + useStockMovements composable tests (TEST-05)
+- [x] 04-03-PLAN.md — Frontend Vitest component tests: ProductForm + OutboundForm shallow-mount with stubbed Base* primitives (TEST-06)
+- [x] 04-04-PLAN.md — docs/ markdown sources (3 docs + 5 Mermaid diagrams + errorCode catalog) + assets (pdf-style.css + pandoc-template.html) + docs/README.md (DOC-01..06)
+- [x] 04-05-PLAN.md — docs/generate-pdfs.sh pipeline (Pandoc + WeasyPrint + mermaid-filter) + 3 committed PDFs in docs/dist/ (DOC-07, DOC-08)
+- [x] 04-06-PLAN.md — Root README polish + TEST-07 final integration smoke (dotnet test + npm test) (TEST-07, DOC-09)
 
 ## Progress
 
