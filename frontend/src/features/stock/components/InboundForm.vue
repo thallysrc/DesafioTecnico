@@ -100,6 +100,21 @@ function onSupplierValueBlur(): void {
 
 function onProductInput(v: string | null): void {
   setFieldValue('productId', (v ?? undefined) as string)
+
+  // UX: pre-fill `supplierValue` with the selected product's current
+  // supplier value so the user doesn't retype it. Field stays editable —
+  // the user can override before submit.
+  if (v) {
+    const selected = products.value.find((p) => p.id === v)
+    if (selected) {
+      const n = selected.supplierValue
+      supplierValueRaw.value = new Intl.NumberFormat('pt-BR', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      }).format(n)
+      setFieldValue('supplierValue', n)
+    }
+  }
 }
 
 function onQuantityInput(v: string | number | null): void {
